@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Build outputs and local signing material must never be committed.
+*.apk
+*.aab
+*.jks
+*.keystore
+keystore.properties

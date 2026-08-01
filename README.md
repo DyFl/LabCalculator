@@ -10,6 +10,40 @@ The app has three independent tabs:
 
 After a successful calculation, every tab shows a selectable **Calculation Steps** card directly below its result. The steps use the same parsed values and intermediate values as the calculation engine.
 
+## Clone, test, and build
+
+You need Git, JDK 17, and the Android SDK with Android API 37 and Android SDK Build Tools 36.0.0. Android Studio can install the JDK and Android SDK for you. The repository contains the application source, Gradle wrapper scripts and wrapper JAR required to start a build. The first build still needs internet access to download Gradle and the declared dependencies; the finished Android app itself works offline.
+
+Clone the repository and enter its folder:
+
+```text
+git clone https://github.com/DyFl/LabCalculator.git
+cd LabCalculator
+```
+
+On Windows PowerShell or Command Prompt, run:
+
+```powershell
+.\gradlew.bat test
+.\gradlew.bat assembleDebug
+```
+
+On macOS or Linux, run:
+
+```bash
+./gradlew test
+./gradlew assembleDebug
+```
+
+The generated APK is `app/build/outputs/apk/debug/app-debug.apk`.
+
+Every push and pull request also runs both commands on Windows, macOS, and Linux in GitHub Actions. To download an APK built there:
+
+1. Open the repository's **Actions** tab on GitHub.
+2. Open a successful **Build** workflow run.
+3. Scroll to **Artifacts** in the run summary.
+4. Download the debug APK artifact for the operating system you want. Each archive contains `app-debug.apk`.
+
 ## Open and run the app in Android Studio
 
 1. Install Android Studio if it is not already installed.
