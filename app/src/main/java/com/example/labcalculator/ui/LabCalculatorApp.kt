@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -30,7 +30,8 @@ import com.example.labcalculator.ui.theme.LabScreenBackground
 private enum class CalculatorTab(val title: String) {
     DILUTION("Dilution"),
     RPD("RPD"),
-    UNIT_CONVERSIONS("Unit conversions")
+    UNIT_CONVERSIONS("Unit conversions"),
+    MS_MSD("MS/MSD")
 }
 
 @Composable
@@ -58,10 +59,12 @@ fun LabCalculatorApp() {
                 color = LabBlue
             )
 
-            PrimaryTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = selectedTab.ordinal,
                 containerColor = LabFormCard,
-                contentColor = LabBlue
+                contentColor = LabBlue,
+                edgePadding = 8.dp,
+                minTabWidth = 96.dp
             ) {
                 CalculatorTab.entries.forEach { tab ->
                     Tab(
@@ -86,6 +89,7 @@ fun LabCalculatorApp() {
                         CalculatorTab.DILUTION -> DilutionCalculatorScreen()
                         CalculatorTab.RPD -> RpdCalculatorScreen()
                         CalculatorTab.UNIT_CONVERSIONS -> UnitConversionsScreen()
+                        CalculatorTab.MS_MSD -> MsMsdCalculatorScreen()
                     }
                 }
             }

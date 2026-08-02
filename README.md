@@ -2,11 +2,12 @@
 
 An Android-only, offline lab-calculation app built with Kotlin and Jetpack Compose. It has no internet permission, login, database, analytics, or external API.
 
-The app has three independent tabs:
+The app has four independent tabs:
 
 - **Dilution** — solves `C1 × V1 = C2 × V2` for the required stock volume.
 - **RPD** — calculates Relative Percent Difference for a sample and replicate.
 - **Unit conversions** — performs exact metric conversions for mass, volume, and mass concentration.
+- **MS/MSD** — calculates source concentration, Matrix Spike and Matrix Spike Duplicate recoveries, and RPD between the literal MS/MSD results.
 
 After a successful calculation, every tab shows a selectable **Calculation Steps** card directly below its result. The steps use the same parsed values and intermediate values as the calculation engine.
 
@@ -97,6 +98,17 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 8. Try the Volume and Mass concentration categories. Each unit menu only contains units from its selected category.
 9. Tap **Clear** to remove the entered value, result, and calculation steps.
 
+### MS/MSD
+
+1. Scroll the tab row if needed and tap **MS/MSD**.
+2. Enter `5` for Raw diluted source-sample result.
+3. Enter `10` for Sample dilution factor.
+4. Enter `50` for Final spike concentration added.
+5. Enter `55` for Literal MS result and `50` for Literal MSD result. All four concentration values must use the same units.
+6. Tap **Calculate**. The results should show an original source concentration of `50`, MS recovery of `100.00%`, MSD recovery of `90.00%`, and MS/MSD RPD of `9.52%`.
+7. Review the selectable Calculation Steps. They should state that the spike was added after dilution and was not multiplied by the dilution factor.
+8. Tap **Clear**. The dilution factor returns to `1`, while the other inputs, results, and steps clear.
+
 To copy calculation work, press and hold text inside a Calculation Steps card, adjust the selection handles if necessary, and tap **Copy**.
 
 To check tab isolation, enter different values on two tabs and switch between them. Each tab keeps its own values and never copies them into another calculator.
@@ -163,3 +175,11 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 - All conversion factors are exact powers of ten.
 - Intermediate values are never rounded.
 - Results omit unnecessary trailing zeros and use ordinary decimal notation for small values.
+
+### MS/MSD
+
+- The raw source result is multiplied by the sample dilution factor to calculate the original source concentration.
+- The spike is added after sample dilution, so the dilution factor is not applied to the spike, literal MS/MSD results, recoveries, or RPD.
+- Recovery is calculated against the raw diluted source result. MS/MSD RPD compares the two literal measured results.
+- Negative recoveries and recoveries above 100% remain visible; the app does not determine pass or fail.
+- Intermediate values are not rounded. Final recovery and RPD percentages are rounded to two decimal places.
