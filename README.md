@@ -2,11 +2,12 @@
 
 An Android-only, offline lab-calculation app built with Kotlin and Jetpack Compose. It has no internet permission, login, database, analytics, or external API.
 
-The app has three independent tabs:
+The app has four independent tabs:
 
 - **Dilution** — solves `C1 × V1 = C2 × V2` for the required stock volume.
 - **RPD** — calculates Relative Percent Difference for a sample and replicate.
 - **Unit conversions** — performs exact metric conversions for mass, volume, and mass concentration.
+- **MS/MSD** — calculates source concentration, Matrix Spike and Matrix Spike Duplicate recoveries, and RPD between the literal MS/MSD results.
 
 After a successful calculation, every tab shows a selectable **Calculation Steps** card directly below its result. The steps use the same parsed values and intermediate values as the calculation engine.
 
@@ -81,7 +82,7 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 2. Enter `10` for Original Sample Result.
 3. Enter `12` for Replicate Sample Result. Both values must use the same units.
 4. Tap **Calculate**. Relative Percent Difference should show `18.18%`.
-5. Scroll below the result. Calculation Steps should show a difference of `2`, an average of `11`, a display-only approximation of `18.181818%`, and the final `18.18%`.
+5. Scroll below the result. Calculation Steps should show a difference of `2`, an average of `11`, an absolute average of `11`, a display-only approximation of `18.181818%`, and the final `18.18%`.
 6. Enter `0` in both fields and calculate. The steps should clear and the app should display: `RPD cannot be calculated when the average is zero.`
 7. Tap **Clear** to reset this tab.
 
@@ -96,6 +97,19 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 7. Tap **Swap starting and destination units**. With `25` still entered, calculate again; the result should show `0.025 mg`.
 8. Try the Volume and Mass concentration categories. Each unit menu only contains units from its selected category.
 9. Tap **Clear** to remove the entered value, result, and calculation steps.
+
+### MS/MSD
+
+1. Scroll the tab row if needed and tap **MS/MSD**.
+2. Choose **PPB** as the shared concentration unit.
+3. Enter `5` for Raw diluted source-sample result.
+4. Enter `10` for Sample dilution factor.
+5. Enter `50` for Final spike concentration added.
+6. Enter `55` for Literal MS result and `50` for Literal MSD result. The shared selector applies PPB to all four concentration values.
+7. Tap **Calculate**. The results should show an original source concentration of `50 PPB`, MS recovery of `100.00%`, MSD recovery of `90.00%`, and MS/MSD RPD of `9.52%`.
+8. Review the selectable Calculation Steps. They should show PPB throughout, state that the spike was added after dilution, and show where PPB cancels in percentage calculations.
+9. Change the shared unit to **PPM** and calculate again to see PPM applied consistently to the inputs, source result, and steps.
+10. Tap **Clear**. The dilution factor returns to `1`, the shared unit returns to PPB, and the other inputs, results, and steps clear.
 
 To copy calculation work, press and hold text inside a Calculation Steps card, adjust the selection handles if necessary, and tap **Copy**.
 
@@ -153,7 +167,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ### RPD
 
-- The equation is `|Original − Replicate| ÷ ((Original + Replicate) ÷ 2) × 100`.
+- The equation is `|Original − Replicate| ÷ |((Original + Replicate) ÷ 2)| × 100`.
 - Intermediate values are not rounded. Only the final result is rounded to two decimal places.
 - The calculation is stopped when the average is zero.
 
@@ -163,3 +177,13 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 - All conversion factors are exact powers of ten.
 - Intermediate values are never rounded.
 - Results omit unnecessary trailing zeros and use ordinary decimal notation for small values.
+
+### MS/MSD
+
+- One shared selector applies either PPB or PPM to the raw source, spike, MS, and MSD concentration values.
+- The original source result and all concentration calculation steps display the selected unit. The common unit cancels when recovery and RPD percentages are calculated.
+- The raw source result is multiplied by the sample dilution factor to calculate the original source concentration.
+- The spike is added after sample dilution, so the dilution factor is not applied to the spike, literal MS/MSD results, recoveries, or RPD.
+- Recovery is calculated against the raw diluted source result. MS/MSD RPD compares the two literal measured results using the absolute average denominator.
+- Negative recoveries and recoveries above 100% remain visible; the app does not determine pass or fail.
+- Intermediate values are not rounded. Final recovery and RPD percentages are rounded to two decimal places.

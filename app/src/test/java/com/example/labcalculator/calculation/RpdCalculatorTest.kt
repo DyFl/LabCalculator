@@ -12,8 +12,8 @@ class RpdCalculatorTest {
         assertEquals("18.18%", result.formattedPercent)
         assertTrue(result.calculationSteps[0].contains("|10 − 12| = 2"))
         assertTrue(result.calculationSteps[1].contains("(10 + 12) ÷ 2 = 11"))
-        assertTrue(result.calculationSteps[3].contains("18.181818%"))
-        assertTrue(result.calculationSteps[3].contains("for display only"))
+        assertTrue(result.calculationSteps[4].contains("18.181818%"))
+        assertTrue(result.calculationSteps[4].contains("for display only"))
         assertTrue(result.calculationSteps.last().contains(result.formattedPercent))
     }
 
@@ -38,6 +38,14 @@ class RpdCalculatorTest {
             requireSuccess(RpdCalculator.calculate("10", "12")).formattedPercent,
             requireSuccess(RpdCalculator.calculate("12", "10")).formattedPercent
         )
+    }
+
+    @Test
+    fun `negative values produce a positive RPD`() {
+        val result = requireSuccess(RpdCalculator.calculate("-5", "-10"))
+
+        assertEquals("66.67%", result.formattedPercent)
+        assertTrue(result.calculationSteps.any { it.contains("Absolute average") })
     }
 
     @Test

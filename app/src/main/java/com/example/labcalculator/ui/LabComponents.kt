@@ -39,12 +39,39 @@ import com.example.labcalculator.ui.theme.LabOutline
 import com.example.labcalculator.ui.theme.LabText
 
 private const val CALCULATION_STEP_SEPARATOR = "\u001F"
+private const val CALCULATION_SECTION_SEPARATOR = "\u001D"
+private const val CALCULATION_SECTION_TITLE_SEPARATOR = "\u001E"
+
+internal data class CalculationStepsSection(
+    val title: String,
+    val steps: List<String>
+)
 
 internal fun encodeCalculationSteps(steps: List<String>): String =
     steps.joinToString(CALCULATION_STEP_SEPARATOR)
 
 internal fun decodeCalculationSteps(encodedSteps: String): List<String> =
     if (encodedSteps.isEmpty()) emptyList() else encodedSteps.split(CALCULATION_STEP_SEPARATOR)
+
+internal fun encodeCalculationStepSections(
+    sections: List<CalculationStepsSection>
+): String = sections.joinToString(CALCULATION_SECTION_SEPARATOR) { section ->
+    section.title + CALCULATION_SECTION_TITLE_SEPARATOR + encodeCalculationSteps(section.steps)
+}
+
+internal fun decodeCalculationStepSections(
+    encodedSections: String
+): List<CalculationStepsSection> {
+    if (encodedSections.isEmpty()) return emptyList()
+
+    return encodedSections.split(CALCULATION_SECTION_SEPARATOR).map { encodedSection ->
+        val parts = encodedSection.split(CALCULATION_SECTION_TITLE_SEPARATOR, limit = 2)
+        CalculationStepsSection(
+            title = parts.first(),
+            steps = decodeCalculationSteps(parts.getOrElse(1) { "" })
+        )
+    }
+}
 
 @Composable
 internal fun LabNumberTextField(
@@ -173,10 +200,11 @@ internal fun <T> LabDropdown(
 /** Shared selectable presentation for calculation work from any calculator. */
 @Composable
 internal fun CalculationStepsCard(
-    steps: List<String>,
+    steps: List<String> = emptyList(),
+    sections: List<CalculationStepsSection> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    if (steps.isEmpty()) return
+    if (steps.isEmpty() && sections.isEmpty()) return
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -193,17 +221,40 @@ internal fun CalculationStepsCard(
             Spacer(modifier = Modifier.height(8.dp))
             SelectionContainer {
                 Column {
-                    steps.forEachIndexed { index, step ->
-                        Text(
-                            text = "${index + 1}. $step",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LabText
-                        )
-                        if (index != steps.lastIndex) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                    if (sections.isEmpty()) {
+                        NumberedCalculationSteps(steps)
+                    } else {
+                        sections.forEachIndexed { sectionIndex, section ->
+                            Text(
+                                text = section.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = LabBlue
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            NumberedCalculationSteps(section.steps)
+                            if (sectionIndex != sections.lastIndex) {
+                                Spacer(modifier = Modifier.height(14.dp))
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NumberedCalculationSteps(steps: List<String>) {
+    Column {
+        steps.forEachIndexed { index, step ->
+            Text(
+                text = "${index + 1}. $step",
+                style = MaterialTheme.typography.bodyMedium,
+                color = LabText
+            )
+            if (index != steps.lastIndex) {
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

@@ -127,7 +127,7 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "÷ ((Original + Replicate) ÷ 2) × 100",
+                    text = "÷ |(Original + Replicate) ÷ 2| × 100",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = LabBlue,
