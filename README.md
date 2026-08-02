@@ -82,7 +82,7 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 2. Enter `10` for Original Sample Result.
 3. Enter `12` for Replicate Sample Result. Both values must use the same units.
 4. Tap **Calculate**. Relative Percent Difference should show `18.18%`.
-5. Scroll below the result. Calculation Steps should show a difference of `2`, an average of `11`, a display-only approximation of `18.181818%`, and the final `18.18%`.
+5. Scroll below the result. Calculation Steps should show a difference of `2`, an average of `11`, an absolute average of `11`, a display-only approximation of `18.181818%`, and the final `18.18%`.
 6. Enter `0` in both fields and calculate. The steps should clear and the app should display: `RPD cannot be calculated when the average is zero.`
 7. Tap **Clear** to reset this tab.
 
@@ -167,7 +167,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ### RPD
 
-- The equation is `|Original − Replicate| ÷ ((Original + Replicate) ÷ 2) × 100`.
+- The equation is `|Original − Replicate| ÷ |((Original + Replicate) ÷ 2)| × 100`.
 - Intermediate values are not rounded. Only the final result is rounded to two decimal places.
 - The calculation is stopped when the average is zero.
 
@@ -184,6 +184,6 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 - The original source result and all concentration calculation steps display the selected unit. The common unit cancels when recovery and RPD percentages are calculated.
 - The raw source result is multiplied by the sample dilution factor to calculate the original source concentration.
 - The spike is added after sample dilution, so the dilution factor is not applied to the spike, literal MS/MSD results, recoveries, or RPD.
-- Recovery is calculated against the raw diluted source result. MS/MSD RPD compares the two literal measured results.
+- Recovery is calculated against the raw diluted source result. MS/MSD RPD compares the two literal measured results using the absolute average denominator.
 - Negative recoveries and recoveries above 100% remain visible; the app does not determine pass or fail.
 - Intermediate values are not rounded. Final recovery and RPD percentages are rounded to two decimal places.

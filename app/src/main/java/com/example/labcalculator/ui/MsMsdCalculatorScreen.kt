@@ -380,7 +380,7 @@ private fun MsMsdEquationCard(concentrationUnit: ConcentrationUnit) {
                 color = LabText
             )
             Text(
-                text = "RPD (%) = |MS − MSD| ÷ ((MS + MSD) ÷ 2) × 100",
+                text = "RPD (%) = |MS − MSD| ÷ |(MS + MSD) ÷ 2| × 100",
                 style = MaterialTheme.typography.bodyMedium,
                 color = LabText
             )

@@ -74,9 +74,30 @@ class MsMsdCalculatorTest {
     fun `swapping MS and MSD does not change RPD`() {
         val forward = calculateSuccess("5", "10", "50", "55", "50")
         val reversed = calculateSuccess("5", "10", "50", "50", "55")
+        val negativeForward = calculateSuccess("0", "1", "10", "-5", "-10")
+        val negativeReversed = calculateSuccess("0", "1", "10", "-10", "-5")
 
         assertEquals(forward.calculation.msMsdRpd, reversed.calculation.msMsdRpd)
         assertEquals(forward.formattedMsMsdRpd, reversed.formattedMsMsdRpd)
+        assertEquals(negativeForward.calculation.msMsdRpd, negativeReversed.calculation.msMsdRpd)
+        assertEquals(negativeForward.formattedMsMsdRpd, negativeReversed.formattedMsMsdRpd)
+    }
+
+    @Test
+    fun `negative MS and MSD values produce a positive RPD`() {
+        val result = calculateSuccess("0", "1", "10", "-5", "-10")
+
+        assertEquals("66.67%", result.formattedMsMsdRpd)
+        assertTrue(result.calculation.msMsdAverage < BigDecimal.ZERO)
+        assertTrue(result.calculation.msMsdAbsoluteAverage > BigDecimal.ZERO)
+    }
+
+    @Test
+    fun `opposite MS and MSD values produce the zero-average error`() {
+        assertEquals(
+            MsMsdResult.ZeroAverage,
+            calculate("0", "1", "10", "-5", "5")
+        )
     }
 
     @Test
@@ -148,6 +169,7 @@ class MsMsdCalculatorTest {
         assertTrue(sections.getValue("MSD recovery").steps[1].contains("45"))
         assertTrue(sections.getValue("MS/MSD RPD").steps[0].contains("= 5"))
         assertTrue(sections.getValue("MS/MSD RPD").steps[1].contains("= 52.5"))
+        assertTrue(sections.getValue("MS/MSD RPD").steps[2].contains("= 52.5"))
         assertTrue(
             sections.getValue("MS recovery").steps.last()
                 .contains(result.formattedMsRecovery)

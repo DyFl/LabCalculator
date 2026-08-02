@@ -51,19 +51,26 @@ object RpdCalculator {
 
         val difference = original.subtract(replicate).abs()
         val average = sum.divide(TWO)
-        // This is algebraically |original - replicate| / ((original + replicate) / 2) * 100.
+        val absoluteAverage = average.abs()
+        // This is |original - replicate| / |((original + replicate) / 2)| * 100.
         // Combining the exact factors avoids rounding the average or any intermediate value.
-        val exactNumerator = difference.multiply(TWO_HUNDRED)
-        val displayedPercent = exactNumerator.divide(sum, DISPLAY_SCALE, RoundingMode.HALF_UP)
+        val exactNumerator = difference.multiply(ONE_HUNDRED)
+        val displayedPercent = exactNumerator.divide(
+            absoluteAverage,
+            DISPLAY_SCALE,
+            RoundingMode.HALF_UP
+        )
         val formattedPercent = "${displayedPercent.toPlainString()}%"
-        val intermediateDisplay = formatIntermediatePercentage(exactNumerator, sum)
+        val intermediateDisplay = formatIntermediatePercentage(exactNumerator, absoluteAverage)
         val calculationSteps = listOf(
             "Difference = |${original.toGroupedExactString()} − " +
                 "${replicate.toGroupedExactString()}| = ${difference.toGroupedExactString()}.",
             "Average = (${original.toGroupedExactString()} + " +
                 "${replicate.toGroupedExactString()}) ÷ 2 = ${average.toGroupedExactString()}.",
+            "Absolute average = |${average.toGroupedExactString()}| = " +
+                "${absoluteAverage.toGroupedExactString()}.",
             "RPD = (${difference.toGroupedExactString()} ÷ " +
-                "${average.toGroupedExactString()}) × 100.",
+                "${absoluteAverage.toGroupedExactString()}) × 100.",
             intermediateDisplay,
             "Final RPD = $formattedPercent."
         )
@@ -113,7 +120,7 @@ object RpdCalculator {
         }
     }
 
-    private val TWO_HUNDRED = BigDecimal("200")
+    private val ONE_HUNDRED = BigDecimal("100")
     private val TWO = BigDecimal("2")
     private const val DISPLAY_SCALE = 2
     private const val INTERMEDIATE_DISPLAY_SCALE = 6

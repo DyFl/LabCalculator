@@ -55,6 +55,7 @@ data class MsMsdCalculation(
     val msdRecovery: ExactPercentage,
     val msMsdDifference: BigDecimal,
     val msMsdAverage: BigDecimal,
+    val msMsdAbsoluteAverage: BigDecimal,
     val msMsdRpd: ExactPercentage
 )
 
@@ -146,7 +147,8 @@ object MsMsdCalculator {
         val msdRecovery = ExactPercentage(msdRecoveredSpike.multiply(ONE_HUNDRED), finalSpike)
         val msMsdDifference = msResult.subtract(msdResult).abs()
         val msMsdAverage = msMsdSum.divide(TWO)
-        val msMsdRpd = ExactPercentage(msMsdDifference.multiply(TWO_HUNDRED), msMsdSum)
+        val msMsdAbsoluteAverage = msMsdAverage.abs()
+        val msMsdRpd = ExactPercentage(msMsdDifference.multiply(ONE_HUNDRED), msMsdAbsoluteAverage)
 
         val calculation = MsMsdCalculation(
             concentrationUnit = input.concentrationUnit,
@@ -162,6 +164,7 @@ object MsMsdCalculator {
             msdRecovery = msdRecovery,
             msMsdDifference = msMsdDifference,
             msMsdAverage = msMsdAverage,
+            msMsdAbsoluteAverage = msMsdAbsoluteAverage,
             msMsdRpd = msMsdRpd
         )
 
@@ -189,6 +192,7 @@ object MsMsdCalculator {
         val msdRecovered = calculation.msdRecoveredSpikeConcentration.toGroupedExactString()
         val difference = calculation.msMsdDifference.toGroupedExactString()
         val average = calculation.msMsdAverage.toGroupedExactString()
+        val absoluteAverage = calculation.msMsdAbsoluteAverage.toGroupedExactString()
         val unit = calculation.concentrationUnit.label
 
         return listOf(
@@ -229,7 +233,8 @@ object MsMsdCalculator {
                         "$difference $unit.",
                     "Average = ($msResult $unit + $msdResult $unit) ÷ 2 = " +
                         "$average $unit.",
-                    "RPD = ($difference $unit ÷ $average $unit) × 100.",
+                    "Absolute average = |$average $unit| = $absoluteAverage $unit.",
+                    "RPD = ($difference $unit ÷ $absoluteAverage $unit) × 100.",
                     "The $unit units cancel.",
                     formatIntermediatePercentage(calculation.msMsdRpd),
                     "Final RPD = ${calculation.msMsdRpd.formatted()}."
@@ -275,7 +280,6 @@ object MsMsdCalculator {
     }
 
     private val ONE_HUNDRED = BigDecimal("100")
-    private val TWO_HUNDRED = BigDecimal("200")
     private val TWO = BigDecimal("2")
     private const val INTERMEDIATE_DISPLAY_SCALE = 6
 }
