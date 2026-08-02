@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.labcalculator.calculation.ConcentrationUnit
 import com.example.labcalculator.calculation.MsMsdCalculator
 import com.example.labcalculator.calculation.MsMsdField
 import com.example.labcalculator.calculation.MsMsdInput
@@ -56,6 +57,9 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
     var finalSpikeConcentration by rememberSaveable { mutableStateOf("") }
     var msResult by rememberSaveable { mutableStateOf("") }
     var msdResult by rememberSaveable { mutableStateOf("") }
+    var concentrationUnitName by rememberSaveable {
+        mutableStateOf(ConcentrationUnit.PPB.name)
+    }
 
     var originalSourceConcentration by rememberSaveable { mutableStateOf("") }
     var msRecovery by rememberSaveable { mutableStateOf("") }
@@ -64,6 +68,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
     var calculationSectionsEncoded by rememberSaveable { mutableStateOf("") }
     var generalError by rememberSaveable { mutableStateOf<String?>(null) }
     var fieldErrors by remember { mutableStateOf(emptyMap<MsMsdField, String>()) }
+    val concentrationUnit = ConcentrationUnit.valueOf(concentrationUnitName)
 
     fun clearCalculatedValues() {
         originalSourceConcentration = ""
@@ -87,7 +92,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     dilutionFactor = dilutionFactor,
                     finalSpikeConcentration = finalSpikeConcentration,
                     msResult = msResult,
-                    msdResult = msdResult
+                    msdResult = msdResult,
+                    concentrationUnit = concentrationUnit
                 )
             )
         ) {
@@ -144,7 +150,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
         )
 
         Spacer(modifier = Modifier.height(14.dp))
-        MsMsdEquationCard()
+        MsMsdEquationCard(concentrationUnit)
         Spacer(modifier = Modifier.height(14.dp))
 
         Card(
@@ -154,6 +160,38 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Concentration unit",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = LabText
+                )
+                Text(
+                    text = "This shared unit applies to the raw sample, spike, MS, and MSD values.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LabMutedText
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                LabDropdown(
+                    selected = concentrationUnit,
+                    options = ConcentrationUnit.entries,
+                    buttonText = { it.label },
+                    menuText = { unit ->
+                        when (unit) {
+                            ConcentrationUnit.PPB -> "PPB (parts per billion)"
+                            ConcentrationUnit.PPM -> "PPM (parts per million)"
+                        }
+                    },
+                    onSelected = { selectedUnit ->
+                        concentrationUnitName = selectedUnit.name
+                        clearCalculatedValues()
+                        generalError = null
+                        fieldErrors = emptyMap()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+
                 MsMsdInputField(
                     label = "Raw diluted source-sample result",
                     supportingText =
@@ -163,7 +201,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         rawSourceResult = it
                         inputChanged(MsMsdField.RAW_SOURCE_RESULT)
                     },
-                    error = fieldErrors[MsMsdField.RAW_SOURCE_RESULT]
+                    error = fieldErrors[MsMsdField.RAW_SOURCE_RESULT],
+                    suffix = concentrationUnit.label
                 )
 
                 MsMsdInputField(
@@ -186,7 +225,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         finalSpikeConcentration = it
                         inputChanged(MsMsdField.FINAL_SPIKE_CONCENTRATION)
                     },
-                    error = fieldErrors[MsMsdField.FINAL_SPIKE_CONCENTRATION]
+                    error = fieldErrors[MsMsdField.FINAL_SPIKE_CONCENTRATION],
+                    suffix = concentrationUnit.label
                 )
 
                 MsMsdInputField(
@@ -197,7 +237,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         msResult = it
                         inputChanged(MsMsdField.MS_RESULT)
                     },
-                    error = fieldErrors[MsMsdField.MS_RESULT]
+                    error = fieldErrors[MsMsdField.MS_RESULT],
+                    suffix = concentrationUnit.label
                 )
 
                 MsMsdInputField(
@@ -209,11 +250,12 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         inputChanged(MsMsdField.MSD_RESULT)
                     },
                     error = fieldErrors[MsMsdField.MSD_RESULT],
+                    suffix = concentrationUnit.label,
                     imeAction = ImeAction.Done
                 )
 
                 Text(
-                    text = "Use the same concentration units for the raw sample, spike, MS, and MSD values.",
+                    text = "All concentration values are interpreted as ${concentrationUnit.label}.",
                     style = MaterialTheme.typography.bodySmall,
                     color = LabBlue,
                     fontWeight = FontWeight.SemiBold
@@ -241,7 +283,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     MsMsdResultCard(
                         label = "Original source concentration",
                         value = originalSourceConcentration,
-                        supportingText = "Same concentration units as the entered values"
+                        supportingText = "Raw source result × sample dilution factor"
                     )
                     MsMsdResultCard(label = "MS recovery", value = msRecovery)
                     MsMsdResultCard(label = "MSD recovery", value = msdRecovery)
@@ -276,6 +318,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                             finalSpikeConcentration = ""
                             msResult = ""
                             msdResult = ""
+                            concentrationUnitName = ConcentrationUnit.PPB.name
                             clearCalculatedValues()
                             generalError = null
                             fieldErrors = emptyMap()
@@ -302,7 +345,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MsMsdEquationCard() {
+private fun MsMsdEquationCard(concentrationUnit: ConcentrationUnit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -314,6 +357,11 @@ private fun MsMsdEquationCard() {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = LabBlue
+            )
+            Text(
+                text = "All concentration terms use ${concentrationUnit.label}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = LabMutedText
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -359,6 +407,7 @@ private fun MsMsdInputField(
     value: String,
     onValueChange: (String) -> Unit,
     error: String?,
+    suffix: String? = null,
     imeAction: ImeAction = ImeAction.Next
 ) {
     Text(
@@ -377,6 +426,7 @@ private fun MsMsdInputField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
+        suffix = suffix,
         error = error,
         imeAction = imeAction
     )

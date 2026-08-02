@@ -101,13 +101,15 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 ### MS/MSD
 
 1. Scroll the tab row if needed and tap **MS/MSD**.
-2. Enter `5` for Raw diluted source-sample result.
-3. Enter `10` for Sample dilution factor.
-4. Enter `50` for Final spike concentration added.
-5. Enter `55` for Literal MS result and `50` for Literal MSD result. All four concentration values must use the same units.
-6. Tap **Calculate**. The results should show an original source concentration of `50`, MS recovery of `100.00%`, MSD recovery of `90.00%`, and MS/MSD RPD of `9.52%`.
-7. Review the selectable Calculation Steps. They should state that the spike was added after dilution and was not multiplied by the dilution factor.
-8. Tap **Clear**. The dilution factor returns to `1`, while the other inputs, results, and steps clear.
+2. Choose **PPB** as the shared concentration unit.
+3. Enter `5` for Raw diluted source-sample result.
+4. Enter `10` for Sample dilution factor.
+5. Enter `50` for Final spike concentration added.
+6. Enter `55` for Literal MS result and `50` for Literal MSD result. The shared selector applies PPB to all four concentration values.
+7. Tap **Calculate**. The results should show an original source concentration of `50 PPB`, MS recovery of `100.00%`, MSD recovery of `90.00%`, and MS/MSD RPD of `9.52%`.
+8. Review the selectable Calculation Steps. They should show PPB throughout, state that the spike was added after dilution, and show where PPB cancels in percentage calculations.
+9. Change the shared unit to **PPM** and calculate again to see PPM applied consistently to the inputs, source result, and steps.
+10. Tap **Clear**. The dilution factor returns to `1`, the shared unit returns to PPB, and the other inputs, results, and steps clear.
 
 To copy calculation work, press and hold text inside a Calculation Steps card, adjust the selection handles if necessary, and tap **Copy**.
 
@@ -178,6 +180,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ### MS/MSD
 
+- One shared selector applies either PPB or PPM to the raw source, spike, MS, and MSD concentration values.
+- The original source result and all concentration calculation steps display the selected unit. The common unit cancels when recovery and RPD percentages are calculated.
 - The raw source result is multiplied by the sample dilution factor to calculate the original source concentration.
 - The spike is added after sample dilution, so the dilution factor is not applied to the spike, literal MS/MSD results, recoveries, or RPD.
 - Recovery is calculated against the raw diluted source result. MS/MSD RPD compares the two literal measured results.

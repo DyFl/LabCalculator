@@ -11,12 +11,32 @@ class MsMsdCalculatorTest {
         val result = calculateSuccess("5", "10", "50", "55", "50")
 
         assertDecimalEquals("50", result.calculation.originalSourceConcentration)
+        assertEquals("50 PPB", result.formattedOriginalSourceConcentration)
         assertDecimalEquals("50", result.calculation.msRecoveredSpikeConcentration)
         assertDecimalEquals("45", result.calculation.msdRecoveredSpikeConcentration)
         assertEquals("100.00%", result.formattedMsRecovery)
         assertEquals("90.00%", result.formattedMsdRecovery)
         assertEquals("9.52%", result.formattedMsMsdRpd)
         assertTrue(result.calculationSections[0].steps.last().contains("not multiplied by 10"))
+    }
+
+    @Test
+    fun `shared PPB and PPM units appear in results and calculation steps`() {
+        val ppbResult = calculateSuccess(
+            "5", "10", "50", "55", "50", ConcentrationUnit.PPB
+        )
+        val ppmResult = calculateSuccess(
+            "5", "10", "50", "55", "50", ConcentrationUnit.PPM
+        )
+
+        assertEquals("50 PPB", ppbResult.formattedOriginalSourceConcentration)
+        assertEquals("50 PPM", ppmResult.formattedOriginalSourceConcentration)
+        assertTrue(ppbResult.calculationSections.flattenedSteps().any { it.contains("50 PPB") })
+        assertTrue(ppmResult.calculationSections.flattenedSteps().any { it.contains("50 PPM") })
+        assertTrue(ppmResult.calculationSections.flattenedSteps().any { it.contains("PPM units cancel") })
+        assertEquals(ppbResult.formattedMsRecovery, ppmResult.formattedMsRecovery)
+        assertEquals(ppbResult.formattedMsdRecovery, ppmResult.formattedMsdRecovery)
+        assertEquals(ppbResult.formattedMsMsdRpd, ppmResult.formattedMsMsdRpd)
     }
 
     @Test
@@ -158,9 +178,10 @@ class MsMsdCalculatorTest {
         dilutionFactor: String,
         spike: String,
         ms: String,
-        msd: String
+        msd: String,
+        concentrationUnit: ConcentrationUnit = ConcentrationUnit.PPB
     ): MsMsdResult = MsMsdCalculator.calculate(
-        MsMsdInput(rawSource, dilutionFactor, spike, ms, msd)
+        MsMsdInput(rawSource, dilutionFactor, spike, ms, msd, concentrationUnit)
     )
 
     private fun calculateSuccess(
@@ -168,9 +189,10 @@ class MsMsdCalculatorTest {
         dilutionFactor: String,
         spike: String,
         ms: String,
-        msd: String
+        msd: String,
+        concentrationUnit: ConcentrationUnit = ConcentrationUnit.PPB
     ): MsMsdResult.Success {
-        val result = calculate(rawSource, dilutionFactor, spike, ms, msd)
+        val result = calculate(rawSource, dilutionFactor, spike, ms, msd, concentrationUnit)
         assertTrue("Expected success but received $result", result is MsMsdResult.Success)
         return result as MsMsdResult.Success
     }
@@ -184,4 +206,7 @@ class MsMsdCalculatorTest {
     private fun assertDecimalEquals(expected: String, actual: BigDecimal) {
         assertEquals(0, actual.compareTo(BigDecimal(expected)))
     }
+
+    private fun List<MsMsdCalculationSection>.flattenedSteps(): List<String> =
+        flatMap { it.steps }
 }

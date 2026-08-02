@@ -16,7 +16,8 @@ data class MsMsdInput(
     val dilutionFactor: String,
     val finalSpikeConcentration: String,
     val msResult: String,
-    val msdResult: String
+    val msdResult: String,
+    val concentrationUnit: ConcentrationUnit = ConcentrationUnit.PPB
 )
 
 data class MsMsdError(
@@ -41,6 +42,7 @@ data class ExactPercentage(
 }
 
 data class MsMsdCalculation(
+    val concentrationUnit: ConcentrationUnit,
     val rawSourceResult: BigDecimal,
     val dilutionFactor: BigDecimal,
     val finalSpikeConcentration: BigDecimal,
@@ -147,6 +149,7 @@ object MsMsdCalculator {
         val msMsdRpd = ExactPercentage(msMsdDifference.multiply(TWO_HUNDRED), msMsdSum)
 
         val calculation = MsMsdCalculation(
+            concentrationUnit = input.concentrationUnit,
             rawSourceResult = rawSource,
             dilutionFactor = dilutionFactor,
             finalSpikeConcentration = finalSpike,
@@ -164,7 +167,8 @@ object MsMsdCalculator {
 
         return MsMsdResult.Success(
             calculation = calculation,
-            formattedOriginalSourceConcentration = originalSource.toExactPlainString(),
+            formattedOriginalSourceConcentration =
+                "${originalSource.toExactPlainString()} ${input.concentrationUnit.label}",
             formattedMsRecovery = msRecovery.formatted(),
             formattedMsdRecovery = msdRecovery.formatted(),
             formattedMsMsdRpd = msMsdRpd.formatted(),
@@ -185,42 +189,48 @@ object MsMsdCalculator {
         val msdRecovered = calculation.msdRecoveredSpikeConcentration.toGroupedExactString()
         val difference = calculation.msMsdDifference.toGroupedExactString()
         val average = calculation.msMsdAverage.toGroupedExactString()
+        val unit = calculation.concentrationUnit.label
 
         return listOf(
             MsMsdCalculationSection(
                 title = "Dilution handling",
                 steps = listOf(
-                    "Original source concentration = $rawSource × $dilutionFactor.",
-                    "Original source concentration = $originalSource.",
+                    "Original source concentration = $rawSource $unit × $dilutionFactor.",
+                    "Original source concentration = $originalSource $unit.",
                     "The dilution factor applies only to the native sample contribution.",
-                    "The $spike spike was added after dilution and is not multiplied by " +
+                    "The $spike $unit spike was added after dilution and is not multiplied by " +
                         "$dilutionFactor."
                 )
             ),
             MsMsdCalculationSection(
                 title = "MS recovery",
                 steps = listOf(
-                    "Recovered spike = $msResult − $rawSource.",
-                    "Recovered spike = $msRecovered.",
-                    "MS recovery = ($msRecovered ÷ $spike) × 100.",
+                    "Recovered spike = $msResult $unit − $rawSource $unit.",
+                    "Recovered spike = $msRecovered $unit.",
+                    "MS recovery = ($msRecovered $unit ÷ $spike $unit) × 100.",
+                    "The $unit units cancel.",
                     "Final MS recovery = ${calculation.msRecovery.formatted()}."
                 )
             ),
             MsMsdCalculationSection(
                 title = "MSD recovery",
                 steps = listOf(
-                    "Recovered spike = $msdResult − $rawSource.",
-                    "Recovered spike = $msdRecovered.",
-                    "MSD recovery = ($msdRecovered ÷ $spike) × 100.",
+                    "Recovered spike = $msdResult $unit − $rawSource $unit.",
+                    "Recovered spike = $msdRecovered $unit.",
+                    "MSD recovery = ($msdRecovered $unit ÷ $spike $unit) × 100.",
+                    "The $unit units cancel.",
                     "Final MSD recovery = ${calculation.msdRecovery.formatted()}."
                 )
             ),
             MsMsdCalculationSection(
                 title = "MS/MSD RPD",
                 steps = listOf(
-                    "Difference = |$msResult − $msdResult| = $difference.",
-                    "Average = ($msResult + $msdResult) ÷ 2 = $average.",
-                    "RPD = ($difference ÷ $average) × 100.",
+                    "Difference = |$msResult $unit − $msdResult $unit| = " +
+                        "$difference $unit.",
+                    "Average = ($msResult $unit + $msdResult $unit) ÷ 2 = " +
+                        "$average $unit.",
+                    "RPD = ($difference $unit ÷ $average $unit) × 100.",
+                    "The $unit units cancel.",
                     formatIntermediatePercentage(calculation.msMsdRpd),
                     "Final RPD = ${calculation.msMsdRpd.formatted()}."
                 )
