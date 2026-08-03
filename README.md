@@ -2,12 +2,30 @@
 
 An Android-only, offline lab-calculation app built with Kotlin and Jetpack Compose. It has no internet permission, login, database, analytics, or external API.
 
+> Lab Calculator is an independent calculation aid currently undergoing analyst evaluation. Results should be verified against the applicable SOP or peer-review worksheet before use.
+
+## Download the analyst preview
+
+Download the newest preview APK from the [latest GitHub release](https://github.com/DyFl/LabCalculator/releases/latest). Under **Assets**, select `LabCalculator-v1.0.0-preview.1.apk`, copy it to an Android phone, and open it from the phone's Files app. If Android blocks the installation, follow the prompt to allow that Files app to **install unknown apps**, then tap **Install**.
+
+This is a preview/debug build for analyst evaluation. Only install APKs obtained from this repository, and verify calculator results against the applicable SOP or peer-review worksheet.
+
 The app has four independent tabs:
 
 - **Dilution** — solves `C1 × V1 = C2 × V2` for the required stock volume.
 - **RPD** — calculates Relative Percent Difference for a sample and replicate.
 - **Unit conversions** — performs exact metric conversions for mass, volume, and mass concentration.
 - **MS/MSD** — calculates source concentration, Matrix Spike and Matrix Spike Duplicate recoveries, and RPD between the literal MS/MSD results.
+
+## Analyst preview
+
+| Dilution calculator | MS/MSD inputs |
+| --- | --- |
+| ![Dilution calculator with equation and input fields](docs/screenshots/dilution-calculator.png) | ![MS/MSD calculator PPB input fields](docs/screenshots/ms-msd-input.png) |
+
+| Completed MS/MSD example | Calculation Steps |
+| --- | --- |
+| ![MS/MSD results showing 50 PPB, 100.00%, 90.00%, and 9.52%](docs/screenshots/ms-msd-results.png) | ![MS/MSD Calculation Steps with substituted PPB values](docs/screenshots/ms-msd-calculation-steps.png) |
 
 After a successful calculation, every tab shows a selectable **Calculation Steps** card directly below its result. The steps use the same parsed values and intermediate values as the calculation engine.
 
@@ -121,7 +139,7 @@ To check field contrast, switch the phone or emulator to system dark mode and re
 
 In Android Studio:
 
-1. In the Project panel, open `app > src > test > java > com.example.labcalculator > calculation`.
+1. In the Project panel, open `app > src > test > java > com.dyfl.labcalculator > calculation`.
 2. Right-click the `calculation` folder.
 3. Choose **Run 'Tests in calculation'**.
 4. Confirm Android Studio shows all tests in green.
