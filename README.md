@@ -2,13 +2,13 @@
 
 An Android-only, offline lab-calculation app built with Kotlin and Jetpack Compose. It has no internet permission, login, database, analytics, or external API.
 
-> Lab Calculator is an independent calculation aid currently undergoing analyst evaluation. Results should be verified against the applicable SOP or peer-review worksheet before use.
+> Lab Calculator is an independent calculation aid. Results should be verified against the applicable SOP or peer-review worksheet before use.
 
 ## Download the analyst preview
 
 Download the newest preview APK from the [latest GitHub release](https://github.com/DyFl/LabCalculator/releases/latest). Under **Assets**, select `LabCalculator-v1.0.0-preview.1.apk`, copy it to an Android phone, and open it from the phone's Files app. If Android blocks the installation, follow the prompt to allow that Files app to **install unknown apps**, then tap **Install**.
 
-This is a preview/debug build for analyst evaluation. Only install APKs obtained from this repository, and verify calculator results against the applicable SOP or peer-review worksheet.
+This is a preview/debug build for. Only install APKs obtained from this repository, and verify calculator results before use.
 
 The app has four independent tabs:
 
@@ -17,7 +17,7 @@ The app has four independent tabs:
 - **Unit conversions** — performs exact metric conversions for mass, volume, and mass concentration.
 - **MS/MSD** — calculates source concentration, Matrix Spike and Matrix Spike Duplicate recoveries, and RPD between the literal MS/MSD results.
 
-## Analyst preview
+## preview
 
 | Dilution calculator | MS/MSD inputs |
 | --- | --- |
