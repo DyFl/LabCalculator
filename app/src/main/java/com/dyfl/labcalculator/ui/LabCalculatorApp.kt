@@ -31,7 +31,8 @@ private enum class CalculatorTab(val title: String) {
     DILUTION("Dilution"),
     RPD("RPD"),
     UNIT_CONVERSIONS("Unit conversions"),
-    MS_MSD("MS/MSD")
+    MS_MSD("MS/MSD"),
+    MOLARITY_MASS("Molarity / mass")
 }
 
 @Composable
@@ -90,6 +91,7 @@ fun LabCalculatorApp() {
                         CalculatorTab.RPD -> RpdCalculatorScreen()
                         CalculatorTab.UNIT_CONVERSIONS -> UnitConversionsScreen()
                         CalculatorTab.MS_MSD -> MsMsdCalculatorScreen()
+                        CalculatorTab.MOLARITY_MASS -> MolarityMassCalculatorScreen()
                     }
                 }
             }

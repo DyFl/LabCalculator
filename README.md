@@ -10,12 +10,13 @@ Download the newest preview APK from the [latest GitHub release](https://github.
 
 This is a preview/debug build for. Only install APKs obtained from this repository, and verify calculator results before use.
 
-The app has four independent tabs:
+The app has five independent tabs:
 
 - **Dilution** — solves `C1 × V1 = C2 × V2` for the required stock volume.
 - **RPD** — calculates Relative Percent Difference for a sample and replicate.
 - **Unit conversions** — performs exact metric conversions for mass, volume, and mass concentration.
 - **MS/MSD** — calculates source concentration, Matrix Spike and Matrix Spike Duplicate recoveries, and RPD between the literal MS/MSD results.
+- **Molarity / mass** — calculates grams of dry chemical from desired molarity, final solution volume, and manually entered formula weight.
 
 ## preview
 
@@ -129,6 +130,16 @@ The screen also displays the equation, converts PPM and PPB exactly, and marks r
 9. Change the shared unit to **PPM** and calculate again to see PPM applied consistently to the inputs, source result, and steps.
 10. Tap **Clear**. The dilution factor returns to `1`, the shared unit returns to PPB, and the other inputs, results, and steps clear.
 
+### Molarity / mass
+
+1. Scroll the tab row and tap **Molarity / mass**.
+2. Enter `0.02` for Desired Molarity, `500` for Final Solution Volume with **mL** selected, and `40.00` for Formula Weight.
+3. Tap **Calculate**. Required Mass should show `0.40000 g`.
+4. Review Calculation Steps: the volume becomes `0.500 L`, followed by the substituted equation and the result in grams.
+5. Change the volume to `0.5` and select **L**. Calculate again; the mass should remain `0.40000 g`.
+6. Try a zero volume or an empty formula weight. Calculate should show a field error and clear the result and steps.
+7. Tap **Clear**. All fields, results, and steps clear, and the volume unit returns to mL.
+
 To copy calculation work, press and hold text inside a Calculation Steps card, adjust the selection handles if necessary, and tap **Copy**.
 
 To check tab isolation, enter different values on two tabs and switch between them. Each tab keeps its own values and never copies them into another calculator.
@@ -174,6 +185,15 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
 ## Calculation rules
+
+### Molarity / mass
+
+- `Mass (g) = molarity (mol/L) × final solution volume (L) × formula weight (g/mol)`.
+- Molarity may be zero but cannot be negative. Volume and formula weight must be greater than zero.
+- Volume accepts mL or L; mL is converted exactly to L. Formula weight is entered from the bottle or reagent documentation.
+- Decimal arithmetic and intermediate values are exact. Nonzero mass results are rounded half up to five significant figures, retaining trailing zeros; zero displays as `0 g`.
+- Scientific notation is used for rounded masses below `0.000001 g` or at least `10,000,000 g`. Results always remain in grams.
+- Calculation Steps show the conversion, substituted inputs, exact mass, and formatted result. Editing an input or unit clears stale results and steps.
 
 ### Dilution
 
