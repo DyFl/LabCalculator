@@ -4,11 +4,17 @@ An Android-only, offline lab-calculation app built with Kotlin and Jetpack Compo
 
 > Lab Calculator is an independent calculation aid. Results should be verified against the applicable SOP or peer-review worksheet before use.
 
-## Download the analyst preview
+## Download v1.0.1 Preview 1
 
-Download the newest preview APK from the [latest GitHub release](https://github.com/DyFl/LabCalculator/releases/latest). Under **Assets**, select `LabCalculator-v1.0.0-preview.1.apk`, copy it to an Android phone, and open it from the phone's Files app. If Android blocks the installation, follow the prompt to allow that Files app to **install unknown apps**, then tap **Install**.
+1. Open the [v1.0.1 Preview 1 prerelease](https://github.com/DyFl/LabCalculator/releases/tag/v1.0.1-preview.1).
+2. Under **Assets**, download `LabCalculator-v1.0.1-preview.1.apk` (not the source-code ZIP). You can also [download the APK directly](https://github.com/DyFl/LabCalculator/releases/download/v1.0.1-preview.1/LabCalculator-v1.0.1-preview.1.apk).
+3. On an Android 7.0 or newer phone, open the downloaded APK from the Files app. If you downloaded it on a computer, copy it to your phone first.
+4. If Android blocks installation, follow the prompt to allow that Files app to **install unknown apps**, return to the APK, and tap **Install**.
+5. Open **Lab Calculator**. Scroll the top tab row to **Molarity / mass** to use the new dry chemical mass calculator.
 
-This is a preview/debug build for. Only install APKs obtained from this repository, and verify calculator results before use.
+This is a preview/debug build. Only install APKs obtained from this repository, and verify calculator results before use. No Android Studio, GitHub account, or internet connection is needed to run the installed app.
+
+**Updating from v1.0.0 Preview 1:** this APK uses a different debug signing certificate. Note any inputs you want to keep, uninstall the old Lab Calculator preview, then install this APK. Uninstalling clears the app's saved inputs and local state.
 
 The app has five independent tabs:
 
