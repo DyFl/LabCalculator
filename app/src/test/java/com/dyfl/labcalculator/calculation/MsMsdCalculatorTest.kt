@@ -2,6 +2,7 @@ package com.dyfl.labcalculator.calculation
 
 import java.math.BigDecimal
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -93,11 +94,17 @@ class MsMsdCalculatorTest {
     }
 
     @Test
-    fun `opposite MS and MSD values produce the zero-average error`() {
-        assertEquals(
-            MsMsdResult.ZeroAverage,
-            calculate("0", "1", "10", "-5", "5")
-        )
+    fun `opposite MS and MSD values preserve recoveries with undefined RPD`() {
+        val result = calculateSuccess("0", "1", "10", "-5", "5")
+        assertEquals("0 PPB", result.formattedOriginalSourceConcentration)
+        assertEquals("-50.00%", result.formattedMsRecovery)
+        assertEquals("50.00%", result.formattedMsdRecovery)
+        assertNull(result.calculation.msMsdRpd)
+        assertEquals("Undefined", result.formattedMsMsdRpd)
+        assertEquals(MsMsdCalculator.UNDEFINED_RPD_MESSAGE, result.rpdUnavailableReason)
+        val rpdSteps = result.calculationSections.last().steps
+        assertTrue(rpdSteps.last().contains("undefined"))
+        assertTrue(rpdSteps.none { it.contains("÷ 0") })
     }
 
     @Test
@@ -128,7 +135,7 @@ class MsMsdCalculatorTest {
         val result = calculateSuccess("0", "1", "10", "1", "100")
 
         assertEquals("196.04%", result.formattedMsMsdRpd)
-        assertTrue(result.calculation.msMsdRpd.roundedValue() > BigDecimal("100"))
+        assertTrue(checkNotNull(result.calculation.msMsdRpd).roundedValue() > BigDecimal("100"))
     }
 
     @Test
@@ -152,16 +159,30 @@ class MsMsdCalculatorTest {
     }
 
     @Test
-    fun `zero MS MSD average returns validation error`() {
-        assertEquals(
-            MsMsdResult.ZeroAverage,
-            calculate("5", "1", "50", "10", "-10")
-        )
+    fun `undefined RPD does not suppress source concentration or recovery steps`() {
+        val result = calculateSuccess("5", "10", "50", "10", "-10")
+        assertEquals("50 PPB", result.formattedOriginalSourceConcentration)
+        assertEquals("10.00%", result.formattedMsRecovery)
+        assertEquals("-30.00%", result.formattedMsdRecovery)
+        assertNull(result.calculation.msMsdRpd)
+        assertTrue(result.calculationSections[1].steps.last().contains("10.00%"))
+        assertTrue(result.calculationSections[2].steps.last().contains("-30.00%"))
+    }
+
+    @Test
+    fun `two zero measurements keep negative recoveries and undefined RPD`() {
+        val result = calculateSuccess("5", "10", "50", "0", "0")
+        assertEquals("50 PPB", result.formattedOriginalSourceConcentration)
+        assertEquals("-10.00%", result.formattedMsRecovery)
+        assertEquals("-10.00%", result.formattedMsdRecovery)
+        assertEquals("Undefined", result.formattedMsMsdRpd)
+        assertNull(result.calculation.msMsdRpd)
     }
 
     @Test
     fun `calculation steps use the same intermediate values as the result`() {
         val result = calculateSuccess("5", "10", "50", "55", "50")
+        assertNull(result.rpdUnavailableReason)
         val sections = result.calculationSections.associateBy { it.title }
 
         assertTrue(sections.getValue("Dilution handling").steps[1].contains("50"))

@@ -52,8 +52,6 @@ object RpdCalculator {
         val difference = original.subtract(replicate).abs()
         val average = sum.divide(TWO)
         val absoluteAverage = average.abs()
-        // This is |original - replicate| / |((original + replicate) / 2)| * 100.
-        // Combining the exact factors avoids rounding the average or any intermediate value.
         val exactNumerator = difference.multiply(ONE_HUNDRED)
         val displayedPercent = exactNumerator.divide(
             absoluteAverage,
@@ -110,11 +108,11 @@ object RpdCalculator {
         }
 
         return try {
-            BigDecimal(trimmedText)
-        } catch (_: NumberFormatException) {
+            parseLabDecimal(trimmedText)
+        } catch (error: NumberFormatException) {
             errors += RpdError(
                 field,
-                "Enter a valid number using digits and a decimal point."
+                checkNotNull(error.message)
             )
             null
         }

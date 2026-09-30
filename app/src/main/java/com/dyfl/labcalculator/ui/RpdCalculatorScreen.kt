@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -24,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +39,7 @@ import com.dyfl.labcalculator.calculation.RpdField
 import com.dyfl.labcalculator.calculation.RpdResult
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabEquationCard
+import com.dyfl.labcalculator.ui.theme.LabError
 import com.dyfl.labcalculator.ui.theme.LabFormCard
 import com.dyfl.labcalculator.ui.theme.LabMutedText
 import com.dyfl.labcalculator.ui.theme.LabScreenBackground
@@ -50,7 +51,7 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
     var relativePercentDifference by rememberSaveable { mutableStateOf("") }
     var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
     var generalError by rememberSaveable { mutableStateOf<String?>(null) }
-    var fieldErrors by remember { mutableStateOf(emptyMap<RpdField, String>()) }
+    var fieldErrors by rememberSaveable { mutableStateOf(emptyMap<RpdField, String>()) }
 
     fun clearResultAndError(field: RpdField) {
         relativePercentDifference = ""
@@ -135,7 +136,7 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Both results must use the same units.",
+                    text = "Both results must use the same units and dilution basis. Signed values use an absolute average; check your SOP for near-zero or non-detect results.",
                     style = MaterialTheme.typography.bodySmall,
                     color = LabMutedText,
                     textAlign = TextAlign.Center
@@ -175,29 +176,9 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                     imeAction = ImeAction.Done
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Text(
-                    text = "Relative Percent Difference",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                LabNumberTextField(
-                    value = relativePercentDifference,
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = "Result",
-                    error = generalError,
-                    readOnly = true,
-                    imeAction = ImeAction.None
-                )
-
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        steps = decodeCalculationSteps(calculationStepsEncoded)
-                    )
+                generalError?.let {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(it, color = LabError, style = MaterialTheme.typography.bodyMedium)
                 }
 
                 Spacer(modifier = Modifier.height(22.dp))
@@ -210,7 +191,7 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                         onClick = ::calculate,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
                     ) {
                         Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -226,10 +207,22 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (relativePercentDifference.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LabResultCard(label = "Relative Percent Difference", value = relativePercentDifference)
+                }
+
+                if (calculationStepsEncoded.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    CalculationStepsCard(
+                        steps = decodeCalculationSteps(calculationStepsEncoded)
+                    )
                 }
             }
         }
@@ -259,6 +252,7 @@ private fun RpdInput(
     )
     Spacer(modifier = Modifier.height(6.dp))
     LabNumberTextField(
+        label = label,
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),

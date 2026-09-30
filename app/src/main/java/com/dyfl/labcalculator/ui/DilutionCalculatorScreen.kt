@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -25,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +40,8 @@ import com.dyfl.labcalculator.calculation.DilutionCalculator
 import com.dyfl.labcalculator.calculation.DilutionField
 import com.dyfl.labcalculator.calculation.DilutionInput
 import com.dyfl.labcalculator.calculation.DilutionResult
+import com.dyfl.labcalculator.presets.PresetKind
+import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabEquationCard
 import com.dyfl.labcalculator.ui.theme.LabFormCard
@@ -55,7 +57,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
     var finalUnitName by rememberSaveable { mutableStateOf(ConcentrationUnit.PPB.name) }
     var volumeFromStock by rememberSaveable { mutableStateOf("") }
     var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
-    var errors by remember { mutableStateOf(emptyMap<DilutionField, String>()) }
+    var errors by rememberSaveable { mutableStateOf(emptyMap<DilutionField, String>()) }
 
     val stockUnit = ConcentrationUnit.valueOf(stockUnitName)
     val finalUnit = ConcentrationUnit.valueOf(finalUnitName)
@@ -111,7 +113,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        EquationCard(stockUnit = stockUnit, finalUnit = finalUnit)
+        EquationCard()
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -122,6 +124,25 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                PresetControls(
+                    kind = PresetKind.DILUTION,
+                    description = "Save concentrations and final volume as a preparation recipe.",
+                    currentSettings = {
+                        PresetSettings.Dilution(DilutionInput(stockConcentration, stockUnit,
+                            finalConcentration, finalUnit, finalSolutionVolume))
+                    },
+                    onApply = { settings ->
+                        val input = (settings as PresetSettings.Dilution).input
+                        stockConcentration = input.stockConcentration
+                        stockUnitName = input.stockUnit.name
+                        finalConcentration = input.finalConcentration
+                        finalUnitName = input.finalUnit.name
+                        finalSolutionVolume = input.finalSolutionVolumeMl
+                        volumeFromStock = ""
+                        calculationStepsEncoded = ""
+                        errors = emptyMap()
+                    }
+                )
                 ConcentrationInput(
                     label = "Stock concentration (C₁)",
                     value = stockConcentration,
@@ -170,17 +191,6 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                     imeAction = ImeAction.Done
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                ReadOnlyVolumeResult(value = volumeFromStock)
-
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        steps = decodeCalculationSteps(calculationStepsEncoded)
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(22.dp))
 
                 Row(
@@ -191,7 +201,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                         onClick = ::calculate,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
                     ) {
                         Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -210,17 +220,29 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Text("Clear all", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (volumeFromStock.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LabResultCard(label = "Volume from stock (V₁)", value = "$volumeFromStock mL")
+                }
+
+                if (calculationStepsEncoded.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    CalculationStepsCard(
+                        steps = decodeCalculationSteps(calculationStepsEncoded)
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Repeating results show three repetitions followed by R (for example, 0.333R).",
+            text = "Short repeating results end in R (for example, 0.333R). Long expansions use an exact fraction in mL. No measurement precision is inferred.",
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText,
@@ -230,10 +252,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun EquationCard(
-    stockUnit: ConcentrationUnit,
-    finalUnit: ConcentrationUnit
-) {
+private fun EquationCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -252,13 +271,13 @@ private fun EquationCard(
                 color = LabBlue
             )
             Text(
-                text = "V₁ (mL) = [C₂ (${finalUnit.label}) × V₂ (mL)] ÷ C₁ (${stockUnit.label})",
+                text = "V₁ (mL) = [C₂ (PPB) × V₂ (mL)] ÷ C₁ (PPB)",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "1 PPM = 1,000 PPB. Units are converted before calculation.",
+                text = "Both concentrations are converted to PPB first (1 PPM = 1,000 PPB). Use matching concentration bases; ppm ≈ mg/L only for dilute water solutions. Make up to the final volume, not that volume of solvent.",
                 style = MaterialTheme.typography.bodySmall,
                 color = LabMutedText,
                 textAlign = TextAlign.Center
@@ -284,6 +303,7 @@ private fun ConcentrationInput(
             verticalAlignment = Alignment.Top
         ) {
             LabNumberTextField(
+                label = label,
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
@@ -320,29 +340,13 @@ private fun LabeledNumberInput(
         FieldHeading(label)
         Spacer(modifier = Modifier.height(6.dp))
         LabNumberTextField(
+            label = label,
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             suffix = suffix,
             error = error,
             imeAction = imeAction
-        )
-    }
-}
-
-@Composable
-private fun ReadOnlyVolumeResult(value: String) {
-    Column {
-        FieldHeading("Volume from stock (V₁)")
-        Spacer(modifier = Modifier.height(6.dp))
-        LabNumberTextField(
-            value = value,
-            onValueChange = {},
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = "Result",
-            suffix = "mL",
-            readOnly = true,
-            imeAction = ImeAction.None
         )
     }
 }

@@ -129,23 +129,11 @@ object MolarityMassCalculator {
             errors += MolarityMassError(field, "Enter the $fieldName.")
             return null
         }
-        // Bound pasted input and exponents so arithmetic and step rendering stay manageable.
-        if (trimmed.length > 256) {
-            errors += MolarityMassError(field, "Enter a shorter number for the $fieldName.")
-            return null
+        return try {
+            parseLabDecimal(trimmed)
+        } catch (error: NumberFormatException) {
+            errors += MolarityMassError(field, checkNotNull(error.message))
+            null
         }
-        val number = try {
-            BigDecimal(trimmed)
-        } catch (_: NumberFormatException) {
-            errors += MolarityMassError(
-                field, "Enter a valid number using digits and a decimal point."
-            )
-            return null
-        }
-        if (number.scale() !in -1000..1000) {
-            errors += MolarityMassError(field, "The $fieldName is outside the supported range.")
-            return null
-        }
-        return number
     }
 }

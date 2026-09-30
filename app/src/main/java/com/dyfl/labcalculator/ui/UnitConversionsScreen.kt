@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,8 @@ import com.dyfl.labcalculator.calculation.MetricUnit
 import com.dyfl.labcalculator.calculation.UnitCategory
 import com.dyfl.labcalculator.calculation.UnitConversionResult
 import com.dyfl.labcalculator.calculation.UnitConverter
+import com.dyfl.labcalculator.presets.PresetKind
+import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabEquationCard
 import com.dyfl.labcalculator.ui.theme.LabFormCard
@@ -111,6 +114,19 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                PresetControls(
+                    kind = PresetKind.UNIT_CONVERSION,
+                    description = "Save a starting and destination unit pair.",
+                    currentSettings = { PresetSettings.Conversion(fromUnit, toUnit) },
+                    onApply = { settings ->
+                        val conversion = settings as PresetSettings.Conversion
+                        categoryName = conversion.fromUnit.category.name
+                        fromUnitName = conversion.fromUnit.name
+                        toUnitName = conversion.toUnit.name
+                        inputValue = ""
+                        clearResult()
+                    }
+                )
                 ConversionHeading("Category")
                 Spacer(modifier = Modifier.height(6.dp))
                 LabDropdown(
@@ -194,6 +210,7 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 ConversionHeading("Value to convert")
                 Spacer(modifier = Modifier.height(6.dp))
                 LabNumberTextField(
+                    label = "Value to convert",
                     value = inputValue,
                     onValueChange = {
                         inputValue = it
@@ -205,27 +222,6 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                     imeAction = ImeAction.Done
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                ConversionHeading("Converted result")
-                Spacer(modifier = Modifier.height(6.dp))
-                LabNumberTextField(
-                    value = convertedValue,
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = "Result",
-                    suffix = toUnit.symbol,
-                    readOnly = true,
-                    imeAction = ImeAction.None
-                )
-
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        steps = decodeCalculationSteps(calculationStepsEncoded)
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(22.dp))
 
                 Row(
@@ -236,7 +232,7 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                         onClick = ::calculate,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
                     ) {
                         Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -250,10 +246,22 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp)
+                            .heightIn(min = 52.dp)
                     ) {
                         Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (convertedValue.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LabResultCard(label = "Converted result", value = "$convertedValue ${toUnit.symbol}")
+                }
+
+                if (calculationStepsEncoded.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    CalculationStepsCard(
+                        steps = decodeCalculationSteps(calculationStepsEncoded)
+                    )
                 }
             }
         }

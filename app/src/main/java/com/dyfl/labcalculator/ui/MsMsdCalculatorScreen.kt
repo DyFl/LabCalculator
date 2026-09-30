@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,10 +22,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,10 +41,11 @@ import com.dyfl.labcalculator.calculation.MsMsdCalculator
 import com.dyfl.labcalculator.calculation.MsMsdField
 import com.dyfl.labcalculator.calculation.MsMsdInput
 import com.dyfl.labcalculator.calculation.MsMsdResult
+import com.dyfl.labcalculator.presets.PresetKind
+import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabCalculatorTheme
 import com.dyfl.labcalculator.ui.theme.LabEquationCard
-import com.dyfl.labcalculator.ui.theme.LabError
 import com.dyfl.labcalculator.ui.theme.LabFormCard
 import com.dyfl.labcalculator.ui.theme.LabMutedText
 import com.dyfl.labcalculator.ui.theme.LabScreenBackground
@@ -66,8 +67,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
     var msdRecovery by rememberSaveable { mutableStateOf("") }
     var msMsdRpd by rememberSaveable { mutableStateOf("") }
     var calculationSectionsEncoded by rememberSaveable { mutableStateOf("") }
-    var generalError by rememberSaveable { mutableStateOf<String?>(null) }
-    var fieldErrors by remember { mutableStateOf(emptyMap<MsMsdField, String>()) }
+    var rpdUnavailableReason by rememberSaveable { mutableStateOf<String?>(null) }
+    var fieldErrors by rememberSaveable { mutableStateOf(emptyMap<MsMsdField, String>()) }
     val concentrationUnit = ConcentrationUnit.valueOf(concentrationUnitName)
 
     fun clearCalculatedValues() {
@@ -75,13 +76,21 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
         msRecovery = ""
         msdRecovery = ""
         msMsdRpd = ""
+        rpdUnavailableReason = null
         calculationSectionsEncoded = ""
     }
 
     fun inputChanged(field: MsMsdField) {
         clearCalculatedValues()
-        generalError = null
         fieldErrors = fieldErrors - field
+    }
+
+    fun nextSample() {
+        rawSourceResult = ""
+        msResult = ""
+        msdResult = ""
+        clearCalculatedValues()
+        fieldErrors = emptyMap()
     }
 
     fun calculate() {
@@ -107,20 +116,13 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         CalculationStepsSection(section.title, section.steps)
                     }
                 )
-                generalError = null
+                rpdUnavailableReason = result.rpdUnavailableReason
                 fieldErrors = emptyMap()
             }
 
             is MsMsdResult.Invalid -> {
                 clearCalculatedValues()
-                generalError = null
                 fieldErrors = result.errors.associate { it.field to it.message }
-            }
-
-            MsMsdResult.ZeroAverage -> {
-                clearCalculatedValues()
-                generalError = MsMsdResult.ZeroAverage.MESSAGE
-                fieldErrors = emptyMap()
             }
         }
     }
@@ -160,6 +162,20 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                PresetControls(
+                    kind = PresetKind.MS_MSD,
+                    description = "Save units, dilution factor and spike concentration for later samples.",
+                    currentSettings = {
+                        PresetSettings.MsMsd(dilutionFactor, finalSpikeConcentration, concentrationUnit)
+                    },
+                    onApply = { settings ->
+                        val preparation = settings as PresetSettings.MsMsd
+                        dilutionFactor = preparation.dilutionFactor
+                        finalSpikeConcentration = preparation.finalSpikeConcentration
+                        concentrationUnitName = preparation.concentrationUnit.name
+                        nextSample()
+                    }
+                )
                 Text(
                     text = "Concentration unit",
                     style = MaterialTheme.typography.titleSmall,
@@ -167,7 +183,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     color = LabText
                 )
                 Text(
-                    text = "This shared unit applies to the raw sample, spike, MS, and MSD values.",
+                    text = "This shared unit labels all concentrations; changing it does not convert entered numbers.",
                     style = MaterialTheme.typography.bodySmall,
                     color = LabMutedText
                 )
@@ -185,7 +201,6 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     onSelected = { selectedUnit ->
                         concentrationUnitName = selectedUnit.name
                         clearCalculatedValues()
-                        generalError = null
                         fieldErrors = emptyMap()
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -231,7 +246,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
 
                 MsMsdInputField(
                     label = "Literal MS result",
-                    supportingText = "Measured result from the diluted-and-spiked MS aliquot.",
+                    supportingText = "Uncorrected measured MS result, on the same dilution basis as the raw source. Do not enter a dilution-corrected result.",
                     value = msResult,
                     onValueChange = {
                         msResult = it
@@ -243,7 +258,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
 
                 MsMsdInputField(
                     label = "Literal MSD result",
-                    supportingText = "Measured result from the diluted-and-spiked MSD aliquot.",
+                    supportingText = "Uncorrected measured MSD result, on the same dilution basis as the raw source. Do not enter a dilution-corrected result.",
                     value = msdResult,
                     onValueChange = {
                         msdResult = it
@@ -261,42 +276,6 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.SemiBold
                 )
 
-                if (generalError != null) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        text = checkNotNull(generalError),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LabError,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                if (originalSourceConcentration.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(18.dp))
-                    Text(
-                        text = "Results",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = LabBlue
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MsMsdResultCard(
-                        label = "Original source concentration",
-                        value = originalSourceConcentration,
-                        supportingText = "Raw source result × sample dilution factor"
-                    )
-                    MsMsdResultCard(label = "MS recovery", value = msRecovery)
-                    MsMsdResultCard(label = "MSD recovery", value = msdRecovery)
-                    MsMsdResultCard(label = "MS/MSD RPD", value = msMsdRpd)
-                }
-
-                if (calculationSectionsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        sections = decodeCalculationStepSections(calculationSectionsEncoded)
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(22.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -306,36 +285,60 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                         onClick = ::calculate,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
                     ) {
                         Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
-                        onClick = {
-                            rawSourceResult = ""
-                            dilutionFactor = "1"
-                            finalSpikeConcentration = ""
-                            msResult = ""
-                            msdResult = ""
-                            concentrationUnitName = ConcentrationUnit.PPB.name
-                            clearCalculatedValues()
-                            generalError = null
-                            fieldErrors = emptyMap()
-                        },
+                        onClick = ::nextSample,
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp)
+                            .heightIn(min = 52.dp)
                     ) {
-                        Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("Next sample", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                TextButton(
+                    onClick = {
+                        dilutionFactor = "1"
+                        finalSpikeConcentration = ""
+                        concentrationUnitName = ConcentrationUnit.PPB.name
+                        nextSample()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Clear all") }
+
+                if (originalSourceConcentration.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LabResultCard(
+                        label = "Original source concentration",
+                        value = originalSourceConcentration,
+                        supportingText = "Raw source result × sample dilution factor"
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LabResultCard(label = "MS recovery", value = msRecovery)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LabResultCard(label = "MSD recovery", value = msdRecovery)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LabResultCard(label = "MS/MSD RPD", value = msMsdRpd,
+                        supportingText = rpdUnavailableReason,
+                        copyEnabled = rpdUnavailableReason == null)
+                }
+
+                if (calculationSectionsEncoded.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    CalculationStepsCard(
+                        sections = decodeCalculationStepSections(calculationSectionsEncoded)
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "No pass/fail decision is made. Recovery and RPD values are shown for analyst review.",
+            text = "RPD compares measured MS/MSD concentrations, not recoveries. No pass/fail decision is made. This assumes the spike does not materially change the native sample concentration.",
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText,
@@ -423,6 +426,7 @@ private fun MsMsdInputField(
     )
     Spacer(modifier = Modifier.height(6.dp))
     LabNumberTextField(
+        label = label,
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
@@ -431,45 +435,6 @@ private fun MsMsdInputField(
         imeAction = imeAction
     )
     Spacer(modifier = Modifier.height(16.dp))
-}
-
-@Composable
-private fun MsMsdResultCard(
-    label: String,
-    value: String,
-    supportingText: String? = null
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = LabEquationCard)
-    ) {
-        SelectionContainer {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = LabMutedText
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = LabBlue
-                )
-                if (supportingText != null) {
-                    Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LabMutedText
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Preview(showBackground = true, widthDp = 320, heightDp = 1000)

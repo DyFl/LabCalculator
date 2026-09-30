@@ -56,7 +56,7 @@ data class MsMsdCalculation(
     val msMsdDifference: BigDecimal,
     val msMsdAverage: BigDecimal,
     val msMsdAbsoluteAverage: BigDecimal,
-    val msMsdRpd: ExactPercentage
+    val msMsdRpd: ExactPercentage?
 )
 
 data class MsMsdCalculationSection(
@@ -71,19 +71,18 @@ sealed interface MsMsdResult {
         val formattedMsRecovery: String,
         val formattedMsdRecovery: String,
         val formattedMsMsdRpd: String,
+        val rpdUnavailableReason: String?,
         val calculationSections: List<MsMsdCalculationSection>
     ) : MsMsdResult
 
     data class Invalid(val errors: List<MsMsdError>) : MsMsdResult
-
-    data object ZeroAverage : MsMsdResult {
-        const val MESSAGE =
-            "MS/MSD RPD cannot be calculated when the average of the MS and MSD results is zero."
-    }
 }
 
 /** Pure MS/MSD calculation. The dilution factor applies only to the native source sample. */
 object MsMsdCalculator {
+    const val UNDEFINED_RPD_MESSAGE =
+        "RPD is undefined because the average of the MS and MSD results is zero."
+
     fun calculate(input: MsMsdInput): MsMsdResult {
         val errors = mutableListOf<MsMsdError>()
         val rawSource = parseInput(
@@ -138,8 +137,6 @@ object MsMsdCalculator {
         checkNotNull(msdResult)
 
         val msMsdSum = msResult.add(msdResult)
-        if (msMsdSum.compareTo(BigDecimal.ZERO) == 0) return MsMsdResult.ZeroAverage
-
         val originalSource = rawSource.multiply(dilutionFactor)
         val msRecoveredSpike = msResult.subtract(rawSource)
         val msdRecoveredSpike = msdResult.subtract(rawSource)
@@ -148,7 +145,11 @@ object MsMsdCalculator {
         val msMsdDifference = msResult.subtract(msdResult).abs()
         val msMsdAverage = msMsdSum.divide(TWO)
         val msMsdAbsoluteAverage = msMsdAverage.abs()
-        val msMsdRpd = ExactPercentage(msMsdDifference.multiply(ONE_HUNDRED), msMsdAbsoluteAverage)
+        val msMsdRpd = if (msMsdAbsoluteAverage.compareTo(BigDecimal.ZERO) == 0) {
+            null
+        } else {
+            ExactPercentage(msMsdDifference.multiply(ONE_HUNDRED), msMsdAbsoluteAverage)
+        }
 
         val calculation = MsMsdCalculation(
             concentrationUnit = input.concentrationUnit,
@@ -174,7 +175,8 @@ object MsMsdCalculator {
                 "${originalSource.toExactPlainString()} ${input.concentrationUnit.label}",
             formattedMsRecovery = msRecovery.formatted(),
             formattedMsdRecovery = msdRecovery.formatted(),
-            formattedMsMsdRpd = msMsdRpd.formatted(),
+            formattedMsMsdRpd = msMsdRpd?.formatted() ?: "Undefined",
+            rpdUnavailableReason = if (msMsdRpd == null) UNDEFINED_RPD_MESSAGE else null,
             calculationSections = buildCalculationSections(calculation)
         )
     }
@@ -233,12 +235,15 @@ object MsMsdCalculator {
                         "$difference $unit.",
                     "Average = ($msResult $unit + $msdResult $unit) ÷ 2 = " +
                         "$average $unit.",
-                    "Absolute average = |$average $unit| = $absoluteAverage $unit.",
-                    "RPD = ($difference $unit ÷ $absoluteAverage $unit) × 100.",
-                    "The $unit units cancel.",
-                    formatIntermediatePercentage(calculation.msMsdRpd),
-                    "Final RPD = ${calculation.msMsdRpd.formatted()}."
-                )
+                    "Absolute average = |$average $unit| = $absoluteAverage $unit."
+                ) + (calculation.msMsdRpd?.let { rpd ->
+                    listOf(
+                        "RPD = ($difference $unit ÷ $absoluteAverage $unit) × 100.",
+                        "The $unit units cancel.",
+                        formatIntermediatePercentage(rpd),
+                        "Final RPD = ${rpd.formatted()}."
+                    )
+                } ?: listOf(UNDEFINED_RPD_MESSAGE))
             )
         )
     }
@@ -269,11 +274,11 @@ object MsMsdCalculator {
         }
 
         return try {
-            BigDecimal(trimmedText)
-        } catch (_: NumberFormatException) {
+            parseLabDecimal(trimmedText)
+        } catch (error: NumberFormatException) {
             errors += MsMsdError(
                 field,
-                "Enter a finite number using digits and a decimal point."
+                checkNotNull(error.message)
             )
             null
         }

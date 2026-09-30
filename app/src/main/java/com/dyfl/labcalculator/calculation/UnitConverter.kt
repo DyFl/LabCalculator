@@ -82,10 +82,10 @@ object UnitConverter {
         }
 
         val value = try {
-            BigDecimal(trimmedValue)
-        } catch (_: NumberFormatException) {
+            parseLabDecimal(trimmedValue)
+        } catch (error: NumberFormatException) {
             return UnitConversionResult.Invalid(
-                "Enter a valid number using digits and a decimal point."
+                checkNotNull(error.message)
             )
         }
 

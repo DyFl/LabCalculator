@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -25,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +40,8 @@ import com.dyfl.labcalculator.calculation.MolarityMassField
 import com.dyfl.labcalculator.calculation.MolarityMassInput
 import com.dyfl.labcalculator.calculation.MolarityMassResult
 import com.dyfl.labcalculator.calculation.MolarityVolumeUnit
+import com.dyfl.labcalculator.presets.PresetKind
+import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabEquationCard
 import com.dyfl.labcalculator.ui.theme.LabFormCard
@@ -54,7 +56,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
     var formulaWeight by rememberSaveable { mutableStateOf("") }
     var requiredMass by rememberSaveable { mutableStateOf("") }
     var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
-    var errors by remember { mutableStateOf(emptyMap<MolarityMassField, String>()) }
+    var errors by rememberSaveable { mutableStateOf(emptyMap<MolarityMassField, String>()) }
     val volumeUnit = MolarityVolumeUnit.valueOf(volumeUnitName)
 
     fun clearResultAndError(field: MolarityMassField) {
@@ -135,8 +137,27 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
             elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                PresetControls(
+                    kind = PresetKind.MOLARITY_MASS,
+                    description = "Save molarity, final volume and formula weight as a reagent recipe.",
+                    currentSettings = {
+                        PresetSettings.MolarityMass(MolarityMassInput(
+                            molarity, finalSolutionVolume, volumeUnit, formulaWeight))
+                    },
+                    onApply = { settings ->
+                        val input = (settings as PresetSettings.MolarityMass).input
+                        molarity = input.molarity
+                        finalSolutionVolume = input.finalSolutionVolume
+                        volumeUnitName = input.volumeUnit.name
+                        formulaWeight = input.formulaWeight
+                        requiredMass = ""
+                        calculationStepsEncoded = ""
+                        errors = emptyMap()
+                    }
+                )
                 FieldHeading("Desired Molarity")
                 LabNumberTextField(
+                    label = "Desired Molarity",
                     value = molarity,
                     onValueChange = {
                         molarity = it
@@ -150,6 +171,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 FieldHeading("Final Solution Volume")
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     LabNumberTextField(
+                        label = "Final Solution Volume",
                         value = finalSolutionVolume,
                         onValueChange = {
                             finalSolutionVolume = it
@@ -173,6 +195,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(18.dp))
                 FieldHeading("Formula Weight")
                 LabNumberTextField(
+                    label = "Formula Weight",
                     value = formulaWeight,
                     onValueChange = {
                         formulaWeight = it
@@ -184,25 +207,10 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                     imeAction = ImeAction.Done
                 )
                 Text(
-                    text = "Enter the formula weight from the bottle or reagent documentation.",
+                    text = "Use the formula weight for the actual reagent, including waters of hydration. Assumes pure reagent; no purity correction is applied.",
                     style = MaterialTheme.typography.bodySmall,
                     color = LabMutedText
                 )
-                Spacer(modifier = Modifier.height(18.dp))
-                FieldHeading("Required Mass")
-                LabNumberTextField(
-                    value = requiredMass,
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = "Result",
-                    suffix = "g",
-                    readOnly = true,
-                    imeAction = ImeAction.None
-                )
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(steps = decodeCalculationSteps(calculationStepsEncoded))
-                }
                 Spacer(modifier = Modifier.height(22.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -210,7 +218,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 ) {
                     Button(
                         onClick = ::calculate,
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
                     ) {
                         Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -225,16 +233,26 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                             calculationStepsEncoded = ""
                             errors = emptyMap()
                         },
-                        modifier = Modifier.weight(1f).height(52.dp)
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp)
                     ) {
                         Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (requiredMass.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(18.dp))
+                    LabResultCard(label = "Required Mass", value = "$requiredMass g")
+                }
+
+                if (calculationStepsEncoded.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    CalculationStepsCard(steps = decodeCalculationSteps(calculationStepsEncoded))
                 }
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Only the final mass is rounded, to 5 significant figures. Results are in grams.",
+            text = "Mass is displayed to 5 significant figures. This does not infer measurement precision from your inputs. Results are in grams.",
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText,
             textAlign = TextAlign.Center

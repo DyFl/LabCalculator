@@ -135,6 +135,8 @@ object DilutionCalculator {
             if (volumeDisplay.endsWith('R')) {
                 "Final Volume from stock = $volumeDisplay mL. R marks an exact repeating " +
                     "decimal; no rounding was applied."
+            } else if ('/' in volumeDisplay) {
+                "Final Volume from stock = $volumeDisplay mL (exact fraction; decimal expansion is too long)."
             } else {
                 "Final Volume from stock = $volumeDisplay mL."
             }
@@ -173,11 +175,11 @@ object DilutionCalculator {
         }
 
         return try {
-            BigDecimal(trimmedText)
-        } catch (_: NumberFormatException) {
+            parseLabDecimal(trimmedText)
+        } catch (error: NumberFormatException) {
             errors += DilutionError(
                 field,
-                "Enter a valid number using digits and a decimal point."
+                checkNotNull(error.message)
             )
             null
         }
@@ -204,6 +206,8 @@ private class ExactFraction private constructor(
         val remainderPositions = mutableMapOf<BigInteger, Int>()
 
         while (remainder != BigInteger.ZERO && remainder !in remainderPositions) {
+            // Long periods can contain millions of digits; retain the exact answer as a fraction.
+            if (digits.length >= MAX_EXPANSION_DIGITS) return "$numerator/$denominator"
             remainderPositions[remainder] = digits.length
             remainder = remainder.multiply(BigInteger.TEN)
             digits.append(remainder.divide(denominator))
@@ -235,6 +239,7 @@ private class ExactFraction private constructor(
     }
 
     companion object {
+        private const val MAX_EXPANSION_DIGITS = 128
         private const val REPETITION_COUNT = 3
         private val TWO = BigInteger.valueOf(2)
         private val FIVE = BigInteger.valueOf(5)
