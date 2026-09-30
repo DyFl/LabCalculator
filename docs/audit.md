@@ -109,3 +109,11 @@ The development build now has shared result cards with copying that includes uni
 Gradle's offline `connectedDebugAndroidTest` task required an uncached Android UTP dependency. The already-built app and test APKs were instead installed through ADB, and `androidx.test.runner.AndroidJUnitRunner` was run directly. Its output reports `OK (12 tests)` and is saved locally at `app/build/reports/bluestacks/android-tests.txt`.
 
 This verification covers one Android 9 emulator. Physical-device behavior, TalkBack focus order, other keyboard implementations, Android 7 compatibility, and other system navigation modes remain unverified.
+
+## Preview packaging — 2026-09-29
+
+Prepared `1.0.2-preview.1` with Android version code `3`. The rebuilt APK's package identity, version, and signature were verified. It installed over the preceding local preview in BlueStacks, and all 12 Android tests passed again on that exact APK. The build and lint checks passed; the unit-test reports contain 68 passing tests, and lint retains the same 15 warnings with zero errors.
+
+The signing certificate matches the published v1.0.1 Preview 1 APK, allowing an update without uninstalling. The published v1.0.0 Preview 1 APK's certificate was also checked and differs; the README retains its uninstall/reinstall instructions. The release includes the APK and a checksum file.
+
+APK SHA-256: `F88FDF05E798800C39099447F2C4137B4590A2E62594A7C374C23D3FD0422CD2`.

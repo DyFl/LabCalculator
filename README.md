@@ -34,9 +34,9 @@ Arithmetic uses decimal numbers rather than binary floating point. Input accepts
 
 ## Install or build
 
-Download an APK from [Releases](https://github.com/DyFl/LabCalculator/releases), open it on your phone, and allow installation from that source if Android prompts you. Preview APKs are debug builds.
+Download the [v1.0.2 Preview 1 APK](https://github.com/DyFl/LabCalculator/releases/download/v1.0.2-preview.1/LabCalculator-v1.0.2-preview.1.apk), open it on your phone, and allow installation from that source if Android prompts you. Preview APKs are debug builds.
 
-The v1.0.1 Preview 1 APK used a different debug signing certificate from v1.0.0 Preview 1. Updating between those previews requires uninstalling the old app first, which clears its state. Record anything you need before uninstalling.
+This APK uses the same signing certificate as v1.0.1 Preview 1 and can be installed over it. The v1.0.0 Preview 1 download used a different certificate; upgrading from that version requires uninstalling the old app first, which clears its state. Record anything you need before uninstalling.
 
 To build from source, open the project in Android Studio with JDK 17 and Android SDK API 37 installed. The Gradle wrapper is included; the first build needs internet access for dependencies.
 
