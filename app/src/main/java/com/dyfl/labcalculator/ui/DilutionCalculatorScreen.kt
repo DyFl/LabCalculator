@@ -44,7 +44,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
     fun clearResultAndError(field: DilutionField) {
         volumeFromStock = ""
         calculationStepsEncoded = ""
-        errors = errors - field
+        errors = DilutionCalculator.errorsAfterEdit(errors, field)
     }
 
     fun calculate() {
@@ -112,9 +112,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                 unit = stockUnit,
                 onUnitChange = {
                     stockUnitName = it.name
-                    volumeFromStock = ""
-                    calculationStepsEncoded = ""
-                    errors = emptyMap()
+                    clearResultAndError(DilutionField.STOCK_CONCENTRATION)
                 },
                 error = errors[DilutionField.STOCK_CONCENTRATION]
             )
@@ -131,9 +129,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                 unit = finalUnit,
                 onUnitChange = {
                     finalUnitName = it.name
-                    volumeFromStock = ""
-                    calculationStepsEncoded = ""
-                    errors = emptyMap()
+                    clearResultAndError(DilutionField.FINAL_CONCENTRATION)
                 },
                 error = errors[DilutionField.FINAL_CONCENTRATION],
                 supportingText = "Use the same concentration basis for stock and target."

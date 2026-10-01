@@ -103,10 +103,12 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 options = UnitCategory.entries,
                 buttonText = { it.displayName },
                 onSelected = { selectedCategory ->
+                    if (selectedCategory == category) return@LabDropdown
                     val units = MetricUnit.forCategory(selectedCategory)
                     categoryName = selectedCategory.name
                     fromUnitName = units.getOrElse(1) { units.first() }.name
                     toUnitName = units.first().name
+                    inputValue = ""
                     clearResult()
                 },
                 modifier = Modifier.fillMaxWidth()

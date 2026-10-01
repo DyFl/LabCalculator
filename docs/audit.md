@@ -150,3 +150,25 @@ Calculation engines, unit handling, precision, preset storage, callbacks, and ta
 - **Android tests:** all 17 passed on BlueStacks Android 9 / API 28 at 360 × 640 and 1.3× text. The four shared UI tests also passed at normal text size. Checks cover unclipped text, single-line subscript labels, one label per field, two-line PPB/PPM notes, selected-tab bounds and scroll cues, swap dimensions/centering, IME behavior, results, and the existing preset/state workflows.
 - **Visual review:** inspected all five tabs in all four states and both themes at both font scales. Screenshot matrices, contrast calculations, and run logs are under `app/build/reports/fourth-polish/`. The effective width/font scale was recorded by Compose, rather than inferred from emulator pixels.
 - **Cleanup:** restored the emulator to 1280 × 720, density 240, and font scale 1.0. `git diff --check` passed. Existing work from earlier polish passes was preserved.
+
+## Cloud bug-fix recovery and review — 2026-10-01
+
+The cloud task **Fix dilution and conversion bugs** completed eight file edits but did not commit or push them. Its Gradle wrapper download failed before compilation or tests, and its environment lacked an Android SDK/device. The patches were recovered from the task's recorded file changes, matched against the current checkout, and reviewed locally.
+
+Three verified bugs are corrected:
+
+- **Dilution validation:** editing the stock clears the target-exceeds-stock error, while independent target and volume errors remain. Concentration-unit changes preserve unrelated errors too. Editing still clears results and steps without calculating automatically.
+- **Conversion categories:** switching category clears the entered number, result, steps, and errors. Selecting the current category preserves the entered value, custom unit pair, result, and error state. Same-category unit selection and swapping retain their existing behavior.
+- **Preset storage:** saves retain original raw records, and deletions remove only matching valid records. Corrupt, unsupported-version, wrong-kind, and noncanonical unrelated records survive unchanged and remain unavailable for calculation when invalid. Unexpected stored value types refuse writes with an explicit error. Duplicate names, valid-preset capacity, calculator isolation, and the storage format remain intact.
+
+The recovered changes include three new JVM tests and seven new Android tests. No additional defect was found in the focused patch review. Calculation formulas, scientific assumptions, exact arithmetic, display rounding, signing configuration, and app version are unchanged. No release was published.
+
+Local verification:
+
+- `gradlew.bat --offline testDebugUnitTest assembleDebug lintDebug assembleDebugAndroidTest --console=plain` passed. All **71 JVM tests** passed with zero failures, errors, or skips; both APKs compiled.
+- Lint completed with **zero errors and the same 19 warnings** for dependencies, manifest configuration, and unused resources.
+- All **24 Android tests** passed on BlueStacks Android 9 / API 28 at 360 × 640 with 1.3× text. This includes all ten new regression tests, existing preset/state workflows, and light/dark UI checks. Runtime output is saved in `build/review/cloud-android-tests.txt`.
+- The offline `connectedDebugAndroidTest` Gradle task could not resolve the uncached UTP additional-test-output plugin. The compiled APKs were installed with ADB and the complete suite ran directly through `AndroidJUnitRunner`; no dependencies or tools were downloaded.
+- BlueStacks display settings were restored to 1280 × 720, density 240, and font scale 1.0. `git diff --check` passed.
+
+Cloud history also records usage-limit failures and interrupted permission/command-launch attempts. The setup task reported a working toolchain in its own environment, but the later bug-fix environment did not contain it. The traces establish blocked downloads and a prolonged pending permission request; they do not establish the backend cause of the reported deadlock. Physical devices and TalkBack remain outside this verification.

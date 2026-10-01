@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.dyfl.labcalculator.presets.CalculatorPresetStore
+import com.dyfl.labcalculator.presets.DeletePresetResult
 import com.dyfl.labcalculator.presets.MAX_PRESET_NAME_LENGTH
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
@@ -219,14 +220,17 @@ internal fun PresetControls(
                                 onClick = {
                                     busy = true
                                     scope.launch {
-                                        val deleted = withContext(Dispatchers.IO) {
+                                        val result = withContext(Dispatchers.IO) {
                                             checkNotNull(store).delete(preset)
                                         }
                                         busy = false
-                                        if (deleted) {
-                                            presets = checkNotNull(store).load(kind)
-                                            error = null
-                                        } else error = "Could not delete the preset. Please try again."
+                                        when (result) {
+                                            DeletePresetResult.Deleted -> {
+                                                presets = checkNotNull(store).load(kind)
+                                                error = null
+                                            }
+                                            is DeletePresetResult.Invalid -> error = result.message
+                                        }
                                     }
                                 },
                                 modifier = Modifier.semantics {

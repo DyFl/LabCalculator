@@ -44,6 +44,20 @@ sealed interface DilutionResult {
  * Solves C1V1 = C2V2 for V1 without rounding any intermediate value.
  */
 object DilutionCalculator {
+    private const val FINAL_EXCEEDS_STOCK_MESSAGE =
+        "Final concentration cannot exceed the stock concentration."
+
+    /** Errors are saved as field/message pairs; only this target error also depends on stock. */
+    internal fun errorsAfterEdit(
+        errors: Map<DilutionField, String>,
+        editedField: DilutionField
+    ): Map<DilutionField, String> = errors.filterNot { (field, message) ->
+        field == editedField ||
+            (editedField == DilutionField.STOCK_CONCENTRATION &&
+                field == DilutionField.FINAL_CONCENTRATION &&
+                message == FINAL_EXCEEDS_STOCK_MESSAGE)
+    }
+
     fun calculate(input: DilutionInput): DilutionResult {
         val errors = mutableListOf<DilutionError>()
 
@@ -101,7 +115,7 @@ object DilutionCalculator {
                 listOf(
                     DilutionError(
                         DilutionField.FINAL_CONCENTRATION,
-                        "Final concentration cannot exceed the stock concentration."
+                        FINAL_EXCEEDS_STOCK_MESSAGE
                     )
                 )
             )

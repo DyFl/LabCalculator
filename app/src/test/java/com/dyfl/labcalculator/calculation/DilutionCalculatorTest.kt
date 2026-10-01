@@ -118,6 +118,40 @@ class DilutionCalculatorTest {
     }
 
     @Test
+    fun `stock edit invalidates the cross-field error and preserves an unrelated volume error`() {
+        val input = DilutionInput("1", ConcentrationUnit.PPM, "2000", ConcentrationUnit.PPB, "50")
+        val comparisonErrors = requireInvalid(DilutionCalculator.calculate(input))
+        val volumeErrors = requireInvalid(DilutionCalculator.calculate(input.copy(
+            stockConcentration = "3", finalSolutionVolumeMl = "0")))
+        val errors = (comparisonErrors + volumeErrors).associate { it.field to it.message }
+
+        val remaining = DilutionCalculator.errorsAfterEdit(errors, DilutionField.STOCK_CONCENTRATION)
+
+        assertEquals(volumeErrors.associate { it.field to it.message }, remaining)
+        assertSuccessfulCalculation(DilutionCalculator.calculate(input.copy(stockConcentration = "3")),
+            "33.333R")
+    }
+
+    @Test
+    fun `stock edit preserves independent target validation`() {
+        for (target in listOf("", "-1", "invalid")) {
+            val errors = requireInvalid(calculate(stock = "0", final = target, volume = "0"))
+                .associate { it.field to it.message }
+            assertEquals(errors - DilutionField.STOCK_CONCENTRATION,
+                DilutionCalculator.errorsAfterEdit(errors, DilutionField.STOCK_CONCENTRATION))
+        }
+    }
+
+    @Test
+    fun `volume edit does not invalidate a concentration comparison`() {
+        val errors = requireInvalid(calculate(stock = "1", final = "2", volume = "50"))
+            .associate { it.field to it.message }
+        assertEquals(errors,
+            DilutionCalculator.errorsAfterEdit(errors, DilutionField.FINAL_SOLUTION_VOLUME))
+        assertTrue(DilutionCalculator.errorsAfterEdit(errors, DilutionField.FINAL_CONCENTRATION).isEmpty())
+    }
+
+    @Test
     fun `zero final concentration returns zero stock volume`() {
         val result = calculate(stock = "10", final = "0", volume = "50")
 
