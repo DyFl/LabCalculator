@@ -81,7 +81,8 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Use the final solution volume. 1,000 mL = 1 L.",
+                text = "Use the final solution volume. 1,000 mL = 1 L. Volume unit changes convert the " +
+                    "quantity exactly; blanks stay blank and invalid numbers block the change.",
                 style = MaterialTheme.typography.bodySmall,
                 color = LabMutedText,
                 textAlign = TextAlign.Center
@@ -156,8 +157,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                     }
                 },
                 error = errors[MolarityMassField.FINAL_SOLUTION_VOLUME],
-                supportingText = "Use the final solution volume, including the reagent. Unit changes convert " +
-                    "the quantity exactly; blanks stay blank and invalid numbers block the change."
+                supportingText = "Use the final solution volume, including the reagent."
             )
             UnitChangeMessage(unitChangeMessage)
 

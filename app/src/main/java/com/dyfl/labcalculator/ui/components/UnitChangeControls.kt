@@ -16,7 +16,7 @@ internal fun UnitChangeMessage(message: String?) {
         color = MaterialTheme.colorScheme.error)
 }
 
-/** Changing interpretation is always a visible reset, never a relabel of populated quantities. */
+/** Confirm a reset when changing interpretation would discard entered text. */
 @Composable
 internal fun UnitResetDialog(description: String, onReset: () -> Unit, onCancel: () -> Unit) {
     AlertDialog(

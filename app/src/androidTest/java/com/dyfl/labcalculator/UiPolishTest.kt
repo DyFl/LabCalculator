@@ -239,7 +239,7 @@ class UiPolishTest {
         click("Unit conversions")
         compose.onNodeWithContentDescription("Category").performScrollTo().performClick()
         compose.onNodeWithText("Mass concentration").performClick()
-        compose.onNodeWithText("Clear and change").performClick()
+        compose.onNodeWithText("Clear and change").assertDoesNotExist()
         compose.onNodeWithContentDescription("Starting unit").performScrollTo().performClick()
         compose.onNodeWithText("grams per liter (g/L)").performClick()
         textFits()

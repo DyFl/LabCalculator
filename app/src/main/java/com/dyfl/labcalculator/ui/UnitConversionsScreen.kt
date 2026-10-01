@@ -65,19 +65,22 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    fun resetCategory(selectedCategory: UnitCategory) {
+        val units = MetricUnit.forCategory(selectedCategory)
+        categoryName = selectedCategory.name
+        fromUnitName = units.getOrElse(1) { units.first() }.name
+        toUnitName = units.first().name
+        inputValue = ""
+        clearResult(clearError = true)
+        pendingCategoryName = null
+    }
+
     if (pendingCategoryName != null) UnitResetDialog(
         description = "Changing category cannot convert the entered quantity. Clear the input and results, " +
             "select ${UnitCategory.valueOf(checkNotNull(pendingCategoryName)).displayName}, and re-enter the value.",
         onCancel = { pendingCategoryName = null },
         onReset = {
-            val selectedCategory = UnitCategory.valueOf(checkNotNull(pendingCategoryName))
-            val units = MetricUnit.forCategory(selectedCategory)
-            categoryName = selectedCategory.name
-            fromUnitName = units.getOrElse(1) { units.first() }.name
-            toUnitName = units.first().name
-            inputValue = ""
-            clearResult(clearError = true)
-            pendingCategoryName = null
+            resetCategory(UnitCategory.valueOf(checkNotNull(pendingCategoryName)))
         }
     )
 
@@ -115,6 +118,10 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall,
                 color = LabMutedText
             )
+            Text("Starting unit changes and Swap units convert the quantity exactly. Blank input stays blank; " +
+                "invalid input blocks the change. Destination changes select only the output unit. " +
+                "Category changes clear the input for re-entry, with confirmation when it is populated.",
+                style = MaterialTheme.typography.bodySmall, color = LabMutedText)
         }
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -140,16 +147,14 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 buttonText = { it.displayName },
                 onSelected = { selectedCategory ->
                     if (selectedCategory == category) return@LabDropdown
-                    pendingCategoryName = selectedCategory.name
+                    if (inputValue.isBlank()) resetCategory(selectedCategory)
+                    else pendingCategoryName = selectedCategory.name
                 },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
 
-            LabInfoRow("Changing the starting unit or swapping converts the entered quantity exactly. " +
-                "Blank input stays blank; invalid input blocks the change. Destination changes only choose the output unit. " +
-                "A category change clears the value for re-entry.")
             UnitChangeMessage(unitChangeMessage)
             LabDropdown(
                 label = "Starting unit",

@@ -59,6 +59,17 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
         errors = DilutionCalculator.errorsAfterEdit(errors, field)
     }
 
+    fun resetConcentrations(unit: ConcentrationUnit) {
+        stockUnitName = unit.name
+        finalUnitName = unit.name
+        stockConcentration = ""
+        finalConcentration = ""
+        errors = errors.filterKeys { it == DilutionField.FINAL_SOLUTION_VOLUME }
+        calculated = false
+        unitChangeMessage = null
+        pendingUnitName = null
+    }
+
     fun changeUnit(unit: ConcentrationUnit, stock: Boolean) {
         val current = if (stock) stockUnit else finalUnit
         if (unit == current) return
@@ -77,7 +88,11 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                 // Quantities are unchanged, so existing validation errors remain relevant.
             }
             is UnitChangeResult.Blocked -> unitChangeMessage = change.message
-            UnitChangeResult.ResetRequired -> pendingUnitName = unit.name
+            UnitChangeResult.ResetRequired -> {
+                // A family reset affects both fields, including the unselected one.
+                if (stockConcentration.isBlank() && finalConcentration.isBlank()) resetConcentrations(unit)
+                else pendingUnitName = unit.name
+            }
         }
     }
 
@@ -86,14 +101,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
             "select ${ConcentrationUnit.valueOf(checkNotNull(pendingUnitName)).label} for both, and re-enter. Final volume stays.",
         onCancel = { pendingUnitName = null },
         onReset = {
-            stockUnitName = checkNotNull(pendingUnitName)
-            finalUnitName = checkNotNull(pendingUnitName)
-            stockConcentration = ""
-            finalConcentration = ""
-            errors = errors.filterKeys { it == DilutionField.FINAL_SOLUTION_VOLUME }
-            calculated = false
-            unitChangeMessage = null
-            pendingUnitName = null
+            resetConcentrations(ConcentrationUnit.valueOf(checkNotNull(pendingUnitName)))
         }
     )
 
@@ -145,7 +153,6 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
             )
             LabInfoRow("Concentration family: ${stockUnit.family.label}. " +
                 "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
-            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
             UnitChangeMessage(unitChangeMessage)
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             LabConcentrationInput(
@@ -172,7 +179,6 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                 unit = finalUnit,
                 onUnitChange = { changeUnit(it, stock = false) },
                 error = errors[DilutionField.FINAL_CONCENTRATION],
-                supportingText = "Use the same concentration basis for stock and target."
             )
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
@@ -251,5 +257,7 @@ private fun EquationCard() {
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText
         )
+        Text(CONCENTRATION_CHANGE_GUIDANCE, style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText)
     }
 }

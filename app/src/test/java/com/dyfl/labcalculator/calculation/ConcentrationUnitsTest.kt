@@ -103,7 +103,7 @@ class ConcentrationUnitsTest {
         assertEquals(0, BigDecimal("1e-897").compareTo(parseLabDecimal(values[1])))
     }
 
-    @Test fun `incompatible family changes require explicit reset even with blank input`() {
+    @Test fun `incompatible families signal reset instead of attempting numeric conversion`() {
         for (from in ConcentrationUnit.entries) for (to in ConcentrationUnit.entries) {
             if (from.family == to.family) continue
             assertEquals(UnitChangeResult.ResetRequired, UnitChanges.concentrations(listOf("5", ""), from, to))

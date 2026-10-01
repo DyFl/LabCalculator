@@ -17,7 +17,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.dyfl.labcalculator.calculation.ConcentrationUnit
-import com.dyfl.labcalculator.calculation.CONCENTRATION_CHANGE_GUIDANCE
 import com.dyfl.labcalculator.calculation.MS_MSD_BASIS_GUIDANCE
 import com.dyfl.labcalculator.calculation.MetricUnit
 import com.dyfl.labcalculator.calculation.MolarityVolumeUnit
@@ -78,15 +77,13 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                         LabPreviewTab.DILUTION -> {
                             LabInfoRow("Concentration family: Parts per: matching ratio basis. " +
                                 "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
-                            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabConcentrationInput("Stock concentration (C₁)", if (filled) "10" else "", {},
                                 ConcentrationUnit.PPM, {},
                                 error = if (error) "Enter the stock concentration." else null)
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabConcentrationInput("Final concentration (C₂)", if (filled) "200" else "", {},
-                                ConcentrationUnit.PPB, {}, error = null,
-                                supportingText = "Use the same concentration basis for stock and target.")
+                                ConcentrationUnit.PPB, {}, error = null)
                             Spacer(Modifier.height(LabGroupSpacing))
                             LabNumberTextField(if (filled) "50" else "", {}, label = "Final solution volume (V₂)",
                                 suffix = "mL", supportingText = "Total prepared solution volume, including the stock.",
@@ -123,24 +120,21 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                             LabDropdown("Shared concentration unit", ConcentrationUnit.PPB, ConcentrationUnit.entries,
                                 buttonText = { it.label }, menuText = { it.description }, onSelected = {},
                                 supportingText = "Parts per: matching ratio basis. Applies to source, spike, MS and MSD.")
-                            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabNumberTextField(if (filled) "10" else "1", {}, label = "Sample dilution factor",
                                 supportingText = "Positive factors, including decimals, are accepted.")
                             Spacer(Modifier.height(LabGroupSpacing))
                             LabNumberTextField(if (filled) "50" else "", {}, label = "Final spike concentration added", suffix = "PPB",
-                                supportingText = "Final concentration added to each diluted aliquot after sample dilution.")
+                                supportingText = "Added to each diluted aliquot after dilution.")
                             Spacer(Modifier.height(LabGroupSpacing))
                             Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall)
                             LabNumberTextField(if (filled) "5" else "", {}, label = "Raw diluted source-sample result", suffix = "PPB",
                                 error = if (error) "Enter the raw source result." else null,
-                                supportingText = "Uncorrected measured result, before applying the dilution factor.")
+                                supportingText = "Before applying the dilution factor.")
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
-                            LabNumberTextField(if (filled) "55" else "", {}, label = "Literal MS result", suffix = "PPB",
-                                supportingText = "Uncorrected MS result, on the same dilution basis as the source.")
+                            LabNumberTextField(if (filled) "55" else "", {}, label = "Literal MS result", suffix = "PPB")
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
-                            LabNumberTextField(if (filled) "50" else "", {}, label = "Literal MSD result", suffix = "PPB", imeAction = ImeAction.Done,
-                                supportingText = "Uncorrected MSD result, on the same dilution basis as the source.")
+                            LabNumberTextField(if (filled) "50" else "", {}, label = "Literal MSD result", suffix = "PPB", imeAction = ImeAction.Done)
                         }
                         LabPreviewTab.MOLARITY -> {
                             LabNumberTextField(if (filled) "1" else "", {}, label = "Desired Molarity",
@@ -171,14 +165,7 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                         LabPreviewTab.CONVERT -> LabResultCard("Converted result", "1000 µg/L")
                         LabPreviewTab.MOLARITY -> LabResultCard("Required Mass", "58.440 g")
                         LabPreviewTab.MS_MSD -> {
-                            LabResultCard("Original source concentration", "50 PPB",
-                                supportingText = "Raw source result × sample dilution factor")
-                            Spacer(Modifier.height(8.dp))
-                            LabResultCard("MS recovery", "100.00%", scrollIntoView = false)
-                            Spacer(Modifier.height(8.dp))
-                            LabResultCard("MSD recovery", "90.00%", scrollIntoView = false)
-                            Spacer(Modifier.height(8.dp))
-                            LabResultCard("MS/MSD RPD", "9.52%", scrollIntoView = false)
+                            MsMsdResultSummary("50 PPB", "100.00%", "90.00%", "9.52%")
                         }
                     }
                 }

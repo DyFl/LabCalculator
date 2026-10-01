@@ -160,24 +160,9 @@ internal fun LabResultCard(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val snackbar = LocalCopySnackbar.current
-    val calculationRequest = LocalCalculationRequest.current
-    val resultRequester = remember { BringIntoViewRequester() }
-    var resultSize by remember { mutableStateOf(IntSize.Zero) }
-    val ime = WindowInsets.ime
-    val density = LocalDensity.current
-    LaunchedEffect(calculationRequest, value) {
-        if (scrollIntoView && calculationRequest > 0) {
-            // Wait for keyboard resizing and the new result's layout before scrolling.
-            snapshotFlow { ime.getBottom(density) }.first { it == 0 }
-            withFrameNanos { }
-            resultRequester.bringIntoView(Rect(0f, 0f, resultSize.width.toFloat(),
-                resultSize.height + with(density) { LabResultBottomMargin.toPx() }))
-        }
-    }
     Card(
-        modifier = modifier.fillMaxWidth().bringIntoViewRequester(resultRequester)
-            .testTag("Result card: $label")
-            .onSizeChanged { resultSize = it },
+        modifier = modifier.fillMaxWidth().resultScrollTarget(value, scrollIntoView)
+            .testTag("Result card: $label"),
         shape = LabControlShape,
         colors = CardDefaults.cardColors(containerColor = LabResultBackground)
     ) {
@@ -208,6 +193,26 @@ internal fun LabResultCard(
             }
         }
     }
+}
+
+/** Scroll newly calculated results after their layout and keyboard resize have settled. */
+@Composable
+internal fun Modifier.resultScrollTarget(value: String, scrollIntoView: Boolean = true): Modifier {
+    val calculationRequest = LocalCalculationRequest.current
+    val resultRequester = remember { BringIntoViewRequester() }
+    var resultSize by remember { mutableStateOf(IntSize.Zero) }
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    LaunchedEffect(calculationRequest, value) {
+        if (scrollIntoView && calculationRequest > 0) {
+            // Wait for keyboard resizing and the new result's layout before scrolling.
+            snapshotFlow { ime.getBottom(density) }.first { it == 0 }
+            withFrameNanos { }
+            resultRequester.bringIntoView(Rect(0f, 0f, resultSize.width.toFloat(),
+                resultSize.height + with(density) { LabResultBottomMargin.toPx() }))
+        }
+    }
+    return bringIntoViewRequester(resultRequester).onSizeChanged { resultSize = it }
 }
 
 /** Working stays selectable and is expanded only when requested. */

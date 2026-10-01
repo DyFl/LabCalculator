@@ -1,16 +1,24 @@
 package com.dyfl.labcalculator.ui
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,6 +41,7 @@ import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabCalculatorTheme
 import com.dyfl.labcalculator.ui.theme.LabMutedText
 import com.dyfl.labcalculator.ui.theme.LabText
+import kotlinx.coroutines.launch
 
 @Composable
 fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
@@ -55,6 +64,9 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
     var unitChangeMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingUnitName by rememberSaveable { mutableStateOf<String?>(null) }
     val concentrationUnit = ConcentrationUnit.valueOf(concentrationUnitName)
+    val sourceFocus = remember { FocusRequester() }
+    val sourceRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
 
     fun clearCalculatedValues() {
         originalSourceConcentration = ""
@@ -71,10 +83,23 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
         fieldErrors = fieldErrors - field
     }
 
+    fun resetConcentrations(unit: ConcentrationUnit) {
+        concentrationUnitName = unit.name
+        rawSourceResult = ""
+        finalSpikeConcentration = ""
+        msResult = ""
+        msdResult = ""
+        fieldErrors = fieldErrors.filterKeys { it == MsMsdField.DILUTION_FACTOR }
+        clearCalculatedValues()
+        unitChangeMessage = null
+        pendingUnitName = null
+    }
+
     fun concentrationUnitChanged(unit: ConcentrationUnit) {
         if (unit == concentrationUnit) return
+        val concentrations = listOf(rawSourceResult, finalSpikeConcentration, msResult, msdResult)
         when (val change = UnitChanges.concentrations(
-            listOf(rawSourceResult, finalSpikeConcentration, msResult, msdResult), concentrationUnit, unit)) {
+            concentrations, concentrationUnit, unit)) {
             is UnitChangeResult.Converted -> {
                 rawSourceResult = change.values[0]
                 finalSpikeConcentration = change.values[1]
@@ -85,18 +110,33 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                 unitChangeMessage = null
             }
             is UnitChangeResult.Blocked -> unitChangeMessage = change.message
-            UnitChangeResult.ResetRequired -> pendingUnitName = unit.name
+            UnitChangeResult.ResetRequired -> {
+                if (concentrations.all { it.isBlank() }) resetConcentrations(unit)
+                else pendingUnitName = unit.name
+            }
         }
     }
 
-    fun nextSample() {
+    fun clearMeasurements() {
         rawSourceResult = ""
         msResult = ""
         msdResult = ""
         clearCalculatedValues()
-        fieldErrors = emptyMap()
         unitChangeMessage = null
         pendingUnitName = null
+    }
+
+    fun nextSample() {
+        clearMeasurements()
+        fieldErrors = fieldErrors.filterKeys {
+            it == MsMsdField.DILUTION_FACTOR || it == MsMsdField.FINAL_SPIKE_CONCENTRATION
+        }
+        scope.launch {
+            // Wait for the cleared form to lay out, then show the first measurement and keyboard.
+            withFrameNanos { }
+            sourceFocus.requestFocus()
+            sourceRequester.bringIntoView()
+        }
     }
 
     if (pendingUnitName != null) UnitResetDialog(
@@ -104,15 +144,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             "select ${ConcentrationUnit.valueOf(checkNotNull(pendingUnitName)).label}, and re-enter. Dilution factor stays.",
         onCancel = { pendingUnitName = null },
         onReset = {
-            concentrationUnitName = checkNotNull(pendingUnitName)
-            rawSourceResult = ""
-            finalSpikeConcentration = ""
-            msResult = ""
-            msdResult = ""
-            fieldErrors = fieldErrors.filterKeys { it == MsMsdField.DILUTION_FACTOR }
-            clearCalculatedValues()
-            unitChangeMessage = null
-            pendingUnitName = null
+            resetConcentrations(ConcentrationUnit.valueOf(checkNotNull(pendingUnitName)))
         }
     )
 
@@ -174,7 +206,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     dilutionFactor = preparation.dilutionFactor
                     finalSpikeConcentration = preparation.finalSpikeConcentration
                     concentrationUnitName = preparation.concentrationUnit.name
-                    nextSample()
+                    clearMeasurements()
+                    fieldErrors = emptyMap()
                 }
             )
             Text("Preparation settings", style = MaterialTheme.typography.titleSmall,
@@ -189,7 +222,6 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = "${concentrationUnit.family.label}. Applies to source, spike, MS and MSD."
             )
-            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
             UnitChangeMessage(unitChangeMessage)
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             MsMsdInputField(
@@ -207,7 +239,7 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             MsMsdInputField(
                 label = "Final spike concentration added",
                 supportingText =
-                    "Final concentration added to each diluted aliquot after sample dilution.",
+                    "Added to each diluted aliquot after dilution.",
                 value = finalSpikeConcentration,
                 onValueChange = {
                     finalSpikeConcentration = it
@@ -218,23 +250,26 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             )
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
-            Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold)
-            MsMsdInputField(
-                label = "Raw diluted source-sample result",
-                supportingText = "Uncorrected measured result, before applying the dilution factor.",
-                value = rawSourceResult,
-                onValueChange = {
-                    rawSourceResult = it
-                    inputChanged(MsMsdField.RAW_SOURCE_RESULT)
-                },
-                error = fieldErrors[MsMsdField.RAW_SOURCE_RESULT],
-                unit = concentrationUnit
-            )
+            // Include the heading so a wrapped floating label cannot sit under the tab bar.
+            Column(Modifier.bringIntoViewRequester(sourceRequester)) {
+                Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold)
+                MsMsdInputField(
+                    label = "Raw diluted source-sample result",
+                    supportingText = "Before applying the dilution factor.",
+                    value = rawSourceResult,
+                    onValueChange = {
+                        rawSourceResult = it
+                        inputChanged(MsMsdField.RAW_SOURCE_RESULT)
+                    },
+                    error = fieldErrors[MsMsdField.RAW_SOURCE_RESULT],
+                    unit = concentrationUnit,
+                    modifier = Modifier.focusRequester(sourceFocus)
+                )
+            }
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             MsMsdInputField(
                 label = "Literal MS result",
-                supportingText = "Uncorrected MS result, on the same dilution basis as the source.",
                 value = msResult,
                 onValueChange = {
                     msResult = it
@@ -247,7 +282,6 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             MsMsdInputField(
                 label = "Literal MSD result",
-                supportingText = "Uncorrected MSD result, on the same dilution basis as the source.",
                 value = msdResult,
                 onValueChange = {
                     msdResult = it
@@ -263,26 +297,15 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     dilutionFactor = "1"
                     finalSpikeConcentration = ""
                     concentrationUnitName = ConcentrationUnit.PPB.name
-                nextSample()
+                clearMeasurements()
+                fieldErrors = emptyMap()
             })
         }
 
         if (originalSourceConcentration.isNotEmpty()) {
             Spacer(modifier = Modifier.height(LabFieldSpacing))
-            LabResultCard(
-                label = "Original source concentration",
-                value = originalSourceConcentration,
-                supportingText = "Raw source result × sample dilution factor; ${concentrationUnit.family.label}."
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LabResultCard(label = "MS recovery", value = msRecovery, scrollIntoView = false)
-            Spacer(modifier = Modifier.height(8.dp))
-            LabResultCard(label = "MSD recovery", value = msdRecovery, scrollIntoView = false)
-            Spacer(modifier = Modifier.height(8.dp))
-            LabResultCard(label = "MS/MSD RPD", value = msMsdRpd,
-                supportingText = rpdUnavailableReason,
-                scrollIntoView = false,
-                copyEnabled = rpdUnavailableReason == null)
+            MsMsdResultSummary(originalSourceConcentration, msRecovery, msdRecovery,
+                msMsdRpd, rpdUnavailableReason)
         }
 
         if (calculationSectionsEncoded.isNotEmpty()) {
@@ -329,26 +352,29 @@ private fun MsMsdEquationCard(concentrationUnit: ConcentrationUnit) {
             color = LabBlue
         )
         Text(
-            text = MS_MSD_BASIS_GUIDANCE + " Only the native source result is multiplied by the dilution factor; " +
+            text = "Only the native source result is multiplied by the dilution factor; " +
                 "the spike, literal MS/MSD results, recoveries, and RPD are not.",
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText
         )
         Text(
-            text = "RPD compares measured MS/MSD concentrations, not recoveries. No pass/fail decision is made. This assumes the spike does not materially change the native sample concentration.",
+            text = "RPD compares measured MS/MSD concentrations, not recoveries. No pass/fail decision is made.",
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText
         )
+        Text(CONCENTRATION_CHANGE_GUIDANCE, style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText)
     }
 }
 
 @Composable
 private fun MsMsdInputField(
     label: String,
-    supportingText: String,
     value: String,
     onValueChange: (String) -> Unit,
     error: String?,
+    modifier: Modifier = Modifier,
+    supportingText: String? = null,
     unit: ConcentrationUnit? = null,
     imeAction: ImeAction = ImeAction.Next
 ) {
@@ -357,7 +383,7 @@ private fun MsMsdInputField(
         value = value,
         onValueChange = onValueChange,
         suffix = unit?.label,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         supportingText = supportingText,
         error = error,
         imeAction = imeAction

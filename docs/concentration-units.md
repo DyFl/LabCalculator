@@ -1,6 +1,6 @@
 # Concentration units and basis — October 1, 2026
 
-This separate pass builds on the dilution preparation and preset-status work. Existing exact rational dilution outputs, µL/mL instruction formatting, approximation marks, and all five preset load statuses remain in place.
+This separate pass builds on the dilution preparation and preset-status work. Existing exact rational dilution outputs, µL/mL instruction formatting, approximation marks, and all five preset load statuses remain in place. The subsequent [workflow cleanup](workflow-cleanup.md) shortens guidance and skips confirmation for all-blank resets; the interaction rules below include that refinement.
 
 ## Supported concentration families
 
@@ -22,10 +22,10 @@ Unit selectors preserve an existing quantity by converting its number exactly. T
 - **Blank fields:** stay blank, including during a shared conversion. Selecting a unit on an empty field specifies the unit for a future entry.
 - **Invalid numeric text or range:** blocks the complete change. Units and every affected value stay unchanged; the UI reports the block. Conversions must fit the calculation parser's 256-character and decimal-scale bounds. Long exact numbers may use scientific notation; conversion never rounds.
 - **Numeric values outside a calculation rule:** zero/negative quantities remain exactly zero/negative after conversion. Existing validation errors remain, and calculation continues to enforce its original sign rules. Signed MS/MSD measurements remain supported.
-- **Incompatible family:** **Clear and change** requires an explicit confirmation. It clears both dilution concentrations or all four MS/MSD concentrations, sets the selected new unit, clears results/steps and concentration errors, and retains volume or dilution factor and its validation errors. Re-enter concentrations using the new basis. **Cancel**, back, and dismissal preserve the entire form. The pending dialog survives Android restoration.
+- **Incompatible family:** a reset clears both dilution concentrations or all four MS/MSD concentrations, sets the selected new unit, clears results/steps and concentration errors, and retains volume or dilution factor and its validation errors. **Clear and change** requires confirmation whenever any affected field contains nonblank text, including invalid text. When every affected field is blank, the reset happens immediately without a dialog. Re-enter concentrations using the new basis. **Cancel**, back, and dismissal preserve the entire form. The pending dialog survives Android restoration.
 - **Compatible changes:** clear calculated results and working, retain still-relevant field errors, and require a fresh Calculate. Selecting the current unit keeps state.
 
-The same policy fixes two closely related inconsistencies: molarity volume changes preserve the exact mL/L quantity; the standalone converter's starting selector and swap preserve its input quantity. Invalid input blocks these changes. Converter destination changes only select the output unit and retain input errors. Converter category changes use the same explicit reset/re-entry dialog. Re-selecting a category keeps state.
+The same policy fixes two closely related inconsistencies: molarity volume changes preserve the exact mL/L quantity; the standalone converter's starting selector and swap preserve its input quantity. Invalid input blocks these changes. Converter destination changes only select the output unit and retain input errors. Converter category changes require reset/re-entry confirmation for nonblank input, including invalid text, and reset immediately for blank input. Re-selecting a category keeps state. Detailed mechanics are in expandable help; blocked-conversion messages and destructive-reset explanations remain contextual.
 
 ## MS/MSD preparation and formulas
 
@@ -46,7 +46,7 @@ Copied dilution instructions retain volume units and approximation marks. Expand
 
 The storage shape and version remain **v1**; fields already contain explicit enum unit names, so no migration or version bump is needed. PPM and PPB enum names, storage keys, and numerical interpretation are unchanged. New records use `MILLIGRAM_PER_LITER` and `MICROGRAM_PER_LITER` in the same slots. Builds that do not recognize these names cannot load those records; the current store retains unavailable raw records and reports accurate availability instead of discarding them.
 
-Loading a dilution preset replaces its concentrations, units and final volume and clears results. Loading MS/MSD replaces the shared unit, spike and dilution factor, and clears sample measurements/results. **Next sample** keeps shared units, spike and dilution factor. **Clear all** restores the original defaults (dilution PPM/PPB; MS/MSD PPB/factor 1). Tab switching and Android saved state retain new units, converted inputs, errors, results and pending reset dialogs. Presets contain no measurements or calculated outputs.
+Loading a dilution preset replaces its concentrations, units and final volume and clears results. Loading MS/MSD replaces the shared unit, spike and dilution factor, and clears sample measurements/results and obsolete errors. **Next sample** keeps shared units, spike, dilution factor and their validation errors; it clears measurement errors and focuses/scrolls to the source field. **Clear all** clears all errors and restores the original defaults (dilution PPM/PPB; MS/MSD PPB/factor 1). Tab switching and Android saved state retain new units, converted inputs, errors, results and pending reset dialogs. Presets contain no measurements or calculated outputs.
 
 Existing unavailable, unsupported-version, wrong-kind and noncanonical unrelated records are still preserved by save/delete. Mixed-family dilution recipes fail validation and are unavailable on load. Valid old and new recipes remain usable beside unavailable records.
 

@@ -45,9 +45,9 @@ internal object UnitChanges {
 
 internal const val CONCENTRATION_CHANGE_GUIDANCE =
     "Compatible unit changes convert entered quantities exactly. Blank fields stay blank; " +
-        "invalid numbers block the change. Changing concentration family clears concentrations for re-entry."
+        "invalid numbers block the change. Changing family clears concentrations for re-entry; " +
+        "confirmation is required when any concentration is populated. PPM/PPB and mg/L/µg/L are distinct bases."
 
 internal const val MS_MSD_BASIS_GUIDANCE =
-    "Spike added after dilution. Enter uncorrected source, MS and MSD measurements on the same " +
-        "dilution and concentration basis. Enter the final spike concentration added to each diluted aliquot. " +
-        "Assumes negligible spike volume, so the native sample concentration is unchanged."
+    "Spike added after dilution. Use uncorrected source, MS and MSD on the same dilution and " +
+        "concentration basis. Assumes negligible spike volume, leaving native concentration unchanged."
