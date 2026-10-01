@@ -16,6 +16,36 @@ class CalculatorPresetTest {
     private val molarity = PresetSettings.MolarityMass(MolarityMassInput(
         "0.02", "250", MolarityVolumeUnit.MILLILITER, "58.44"))
 
+    @Test fun `literal original v1 fixtures keep parts per meaning without migration`() {
+        val dilution = PresetCodec.decode("1|old-dilution|Old|DILUTION|10|PPM|200|PPB|50")!!
+        assertEquals(ConcentrationUnit.PPM, (dilution.settings as PresetSettings.Dilution).input.stockUnit)
+        assertEquals(ConcentrationUnit.PPB, dilution.settings.input.finalUnit)
+        val ms = PresetCodec.decode("1|old-ms|Old|MS_MSD|10|50|PPB")!!
+        assertEquals(PresetSettings.MsMsd("10", "50", ConcentrationUnit.PPB), ms.settings)
+        assertEquals(ms, PresetCodec.decode(PresetCodec.encode(ms)))
+    }
+
+    @Test fun `new units round trip in existing versioned structure`() {
+        for (unit in ConcentrationUnit.entries) {
+            val settings = PresetSettings.MsMsd("2.5", "0.1234567890123456789", unit)
+            val preset = CalculatorPreset("new-ms", "New", settings)
+            assertEquals(preset, PresetCodec.decode(PresetCodec.encode(preset)))
+            val dilution = CalculatorPreset("new-dilution", "New", PresetSettings.Dilution(
+                DilutionInput("10", unit, "1", unit, "50")))
+            assertEquals(dilution, PresetCodec.decode(PresetCodec.encode(dilution)))
+        }
+        val mixed = CalculatorPreset("new-mixed", "New", PresetSettings.Dilution(DilutionInput(
+            "10", ConcentrationUnit.MILLIGRAM_PER_LITER, "200", ConcentrationUnit.MICROGRAM_PER_LITER, "50")))
+        assertEquals(mixed, PresetCodec.decode(PresetCodec.encode(mixed)))
+    }
+
+    @Test fun `incompatible concentration presets remain unavailable`() {
+        val mixed = CalculatorPreset("mixed", "Mixed", PresetSettings.Dilution(DilutionInput(
+            "10", ConcentrationUnit.PPM, "1", ConcentrationUnit.MILLIGRAM_PER_LITER, "50")))
+        assertNotNull(mixed.settings.validationError())
+        assertNull(PresetCodec.decode(PresetCodec.encode(mixed)))
+    }
+
     @Test
     fun `all preset types preserve exact inputs units and escaped Unicode names`() {
         val settings = listOf(dilution, molarity,

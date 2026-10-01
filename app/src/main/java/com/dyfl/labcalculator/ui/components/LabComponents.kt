@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import com.dyfl.labcalculator.ui.theme.LabBlue
@@ -153,7 +154,8 @@ internal fun LabResultCard(
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     copyEnabled: Boolean = true,
-    scrollIntoView: Boolean = true
+    scrollIntoView: Boolean = true,
+    valueStyle: TextStyle = MaterialTheme.typography.displaySmall
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -197,7 +199,7 @@ internal fun LabResultCard(
                 ) { Icon(LabIcons.Copy, contentDescription = "Copy $label") }
             }
             SelectionContainer {
-                Text(value, style = MaterialTheme.typography.displaySmall,
+                Text(value, style = valueStyle,
                     fontWeight = FontWeight.Bold, color = LabBlue)
             }
             if (supportingText != null) {

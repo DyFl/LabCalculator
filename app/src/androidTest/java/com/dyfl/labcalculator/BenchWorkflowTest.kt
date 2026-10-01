@@ -56,15 +56,15 @@ class BenchWorkflowTest {
         field("Final concentration (C₂)").performTextInput("200")
         field("Final solution volume (V₂)").performTextInput("50")
         click("Calculate")
-        compose.onNodeWithText("1 mL").assertExists()
-        compose.onNodeWithText("Final Volume from stock", substring = true).assertDoesNotExist()
-        compose.onNodeWithContentDescription("Copy Volume from stock (V₁)")
+        compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertExists()
+        compose.onNodeWithText("Exact stock transfer", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Copy Preparation")
             .performScrollTo().performClick()
         compose.waitUntil {
-            clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "1 mL"
+            clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "Transfer 1 mL of stock and make up to 50 mL final solution volume."
         }
         click("Calculation Steps")
-        compose.onNodeWithText("Final Volume from stock", substring = true).assertExists()
+        compose.onNodeWithText("Exact stock transfer", substring = true).assertExists()
     }
 
     @Test
@@ -78,7 +78,7 @@ class BenchWorkflowTest {
         compose.onNodeWithText("Save concentrations and final volume as a preparation recipe.").assertExists()
         field("Preset name").performTextInput("Daily standard")
         compose.onNodeWithText("Save").performClick()
-        compose.waitUntil { store.load(PresetKind.DILUTION).size == 1 }
+        compose.waitUntil { store.load(PresetKind.DILUTION).presets.size == 1 }
         compose.waitUntil { compose.onAllNodesWithText("Preset name").fetchSemanticsNodes().isEmpty() }
         compose.waitForIdle()
         click("Clear all")
@@ -87,9 +87,9 @@ class BenchWorkflowTest {
         field("Stock concentration (C₁)").assertTextContains("10")
         field("Final concentration (C₂)").assertTextContains("200")
         field("Final solution volume (V₂)").assertTextContains("50")
-        compose.onNodeWithText("1 mL").assertDoesNotExist()
+        compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertDoesNotExist()
         click("Calculate")
-        compose.onNodeWithText("1 mL").assertExists()
+        compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertExists()
     }
 
     @Test
@@ -115,7 +115,7 @@ class BenchWorkflowTest {
         click("Load preset")
         compose.onNodeWithText("Metals daily").performClick()
         assertEmpty("Literal MS result")
-        assertEquals("10", (store.load(PresetKind.MS_MSD).single().settings as PresetSettings.MsMsd).dilutionFactor)
+        assertEquals("10", (store.load(PresetKind.MS_MSD).presets.single().settings as PresetSettings.MsMsd).dilutionFactor)
     }
 
     @Test

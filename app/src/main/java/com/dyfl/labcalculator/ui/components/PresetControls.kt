@@ -44,6 +44,8 @@ import com.dyfl.labcalculator.presets.MAX_PRESET_NAME_LENGTH
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.presets.SavePresetResult
+import com.dyfl.labcalculator.presets.PresetLoadResult
+import com.dyfl.labcalculator.presets.message
 import com.dyfl.labcalculator.presets.validationError
 import com.dyfl.labcalculator.ui.theme.LabError
 import com.dyfl.labcalculator.ui.theme.LabMutedText
@@ -69,7 +71,10 @@ internal fun PresetControls(
     val store = remember(context, providedStore, inspectionMode) {
         providedStore ?: if (inspectionMode) null else CalculatorPresetStore(context)
     }
-    var presets by remember(store, kind) { mutableStateOf(store?.load(kind).orEmpty()) }
+    var loadResult by remember(store, kind) {
+        mutableStateOf(store?.load(kind) ?: PresetLoadResult.Empty)
+    }
+    val presets = loadResult.presets
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
     var showLoadDialog by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf("") }
@@ -86,7 +91,7 @@ internal fun PresetControls(
     LaunchedEffect(settingsSnapshot) { error = null }
     DisposableEffect(store, kind) {
         val unsubscribe = store?.let { observedStore ->
-            observedStore.observe(kind) { presets = observedStore.load(kind) }
+            observedStore.observe(kind) { loadResult = observedStore.load(kind) }
         }
         onDispose { unsubscribe?.invoke() }
     }
@@ -96,7 +101,7 @@ internal fun PresetControls(
             OutlinedButton(
                 onClick = {
                     error = null
-                    presets = store?.load(kind).orEmpty()
+                    loadResult = store?.load(kind) ?: PresetLoadResult.Empty
                     showLoadDialog = true
                 },
                 enabled = store != null && presets.isNotEmpty(),
@@ -129,8 +134,8 @@ internal fun PresetControls(
                 Text("Save preset", modifier = Modifier.weight(1f))
             }
         }
-        if (presets.isEmpty()) {
-            Text("No saved presets", modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+        loadResult.message?.let { message ->
+            Text(message, modifier = Modifier.padding(start = 16.dp, top = 4.dp),
                 style = MaterialTheme.typography.bodySmall, color = LabMutedText)
         }
         if (error != null && !showLoadDialog) {
@@ -177,7 +182,7 @@ internal fun PresetControls(
                             busy = false
                             when (result) {
                                 is SavePresetResult.Saved -> {
-                                    presets = store?.load(kind).orEmpty()
+                                    loadResult = store?.load(kind) ?: PresetLoadResult.Empty
                                     showSaveDialog = false
                                     error = null
                                 }
@@ -201,7 +206,7 @@ internal fun PresetControls(
             text = {
                 Column(modifier = Modifier.heightIn(max = 360.dp)
                     .verticalScroll(rememberScrollState())) {
-                    if (presets.isEmpty()) Text("No saved presets.")
+                    loadResult.message?.let { Text(it) }
                     presets.forEach { preset ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(
@@ -226,7 +231,7 @@ internal fun PresetControls(
                                         busy = false
                                         when (result) {
                                             DeletePresetResult.Deleted -> {
-                                                presets = checkNotNull(store).load(kind)
+                                                loadResult = checkNotNull(store).load(kind)
                                                 error = null
                                             }
                                             is DeletePresetResult.Invalid -> error = result.message

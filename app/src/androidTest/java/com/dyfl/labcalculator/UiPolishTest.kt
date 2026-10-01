@@ -123,10 +123,10 @@ class UiPolishTest {
         field("Final concentration (C₂)").performImeAction()
         field("Final solution volume (V₂)").assertIsFocused().performTextInput("50")
         field("Final solution volume (V₂)").performImeAction()
-        compose.onNodeWithText("1 mL").assertIsDisplayed()
-        resultFits("Volume from stock (V₁)")
+        compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertIsDisplayed()
+        resultFits("Preparation")
         field("Final solution volume (V₂)").assertIsNotFocused()
-        compose.onNodeWithContentDescription("Copy Volume from stock (V₁)").performClick()
+        compose.onNodeWithContentDescription("Copy Preparation").performClick()
         compose.onNodeWithText("Copied").assertIsDisplayed()
         click("Calculation Steps")
         compose.onNodeWithText("Calculation Steps").assert(
@@ -137,15 +137,15 @@ class UiPolishTest {
         // Recalculating unchanged inputs must bring the existing result back into view.
         field("Stock concentration (C₁)").performScrollTo()
         click("Calculate")
-        compose.onNodeWithText("1 mL").assertIsDisplayed()
-        resultFits("Volume from stock (V₁)")
+        compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertIsDisplayed()
+        resultFits("Preparation")
     }
 
     @Test fun allTabsInheritActionsImeAndUnclippedSmallScreenLayouts() {
         app()
         val cases = listOf(
             Triple("Dilution", listOf("Stock concentration (C₁)" to "10",
-                "Final concentration (C₂)" to "200", "Final solution volume (V₂)" to "50"), "1 mL"),
+                "Final concentration (C₂)" to "200", "Final solution volume (V₂)" to "50"), "Transfer 1 mL of stock and make up to 50 mL final solution volume."),
             Triple("RPD", listOf("Original Sample Result" to "10", "Replicate Sample Result" to "12"), "18.18%"),
             Triple("Unit conversions", listOf("Value to convert" to "1"), "1000 µg"),
             Triple("MS/MSD", listOf("Raw diluted source-sample result" to "5", "Sample dilution factor" to "10",
@@ -170,7 +170,7 @@ class UiPolishTest {
             screenshot("$filePrefix-filled-light")
             field(values.last().first).performImeAction()
             compose.onNodeWithText(result).assertIsDisplayed()
-            resultFits(listOf("Volume from stock (V₁)", "Relative Percent Difference", "Converted result",
+            resultFits(listOf("Preparation", "Relative Percent Difference", "Converted result",
                 "Original source concentration", "Required Mass")[index])
             screenshot("$filePrefix-result-light")
             compose.runOnIdle { dark = true }
@@ -223,21 +223,23 @@ class UiPolishTest {
         }
     }
 
-    @Test fun inlineUnitsKeepSharedMsMsdValuesAndConversionSwapWorks() {
+    @Test fun sharedMsMsdUnitConvertsValuesAndConversionSwapWorks() {
         app()
         click("MS/MSD")
         field("Raw diluted source-sample result").performTextReplacement("5")
-        compose.onNodeWithContentDescription("Unit for Raw diluted source-sample result")
-            .performScrollTo().assertHeightIsAtLeast(androidx.compose.ui.unit.Dp(48f)).performClick()
+        compose.onNodeWithContentDescription("Shared concentration unit")
+            .performScrollTo().performClick()
         compose.onNodeWithText("PPM (parts per million)").performClick()
-        field("Raw diluted source-sample result").assertTextContains("5")
-        compose.onAllNodesWithContentDescription("Unit for", substring = true).assertCountEquals(4)
+        field("Raw diluted source-sample result").assertTextContains("0.005")
+        compose.onAllNodesWithContentDescription("Unit for", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithContentDescription("Shared concentration unit").assertCountEquals(1)
         compose.onNodeWithText("All concentrations are in PPM.", substring = true).assertExists()
         infoFits()
 
         click("Unit conversions")
         compose.onNodeWithContentDescription("Category").performScrollTo().performClick()
         compose.onNodeWithText("Mass concentration").performClick()
+        compose.onNodeWithText("Clear and change").performClick()
         compose.onNodeWithContentDescription("Starting unit").performScrollTo().performClick()
         compose.onNodeWithText("grams per liter (g/L)").performClick()
         textFits()

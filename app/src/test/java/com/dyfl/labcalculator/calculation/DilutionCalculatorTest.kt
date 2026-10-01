@@ -35,7 +35,7 @@ class DilutionCalculatorTest {
     }
 
     @Test
-    fun `repeating result shows three repetitions followed by R`() {
+    fun `repeating result retains an exact fraction`() {
         val result = calculate(
             stock = "3",
             stockUnit = ConcentrationUnit.PPM,
@@ -44,10 +44,11 @@ class DilutionCalculatorTest {
             volume = "1"
         )
 
-        assertSuccessfulCalculation(result, "0.333R")
+        assertSuccessfulCalculation(result, "1/3")
         assertTrue(
-            (result as DilutionResult.Success).calculationSteps.last()
-                .contains("R marks an exact repeating decimal")
+            (result as DilutionResult.Success).calculationSteps.any {
+                it.contains("1000/3 µL (exact fraction; nonterminating decimal)")
+            }
         )
     }
 
@@ -129,7 +130,7 @@ class DilutionCalculatorTest {
 
         assertEquals(volumeErrors.associate { it.field to it.message }, remaining)
         assertSuccessfulCalculation(DilutionCalculator.calculate(input.copy(stockConcentration = "3")),
-            "33.333R")
+            "100/3")
     }
 
     @Test
@@ -182,8 +183,8 @@ class DilutionCalculatorTest {
     private fun assertSuccessfulCalculation(result: DilutionResult, expectedVolume: String) {
         assertTrue("Expected a successful result but received $result", result is DilutionResult.Success)
         result as DilutionResult.Success
-        assertEquals(expectedVolume, result.volumeFromStockMl)
+        assertEquals(expectedVolume, result.volumeFromStockMl.toExactString())
         assertTrue(result.calculationSteps.isNotEmpty())
-        assertTrue(result.calculationSteps.last().contains("$expectedVolume mL"))
+        assertTrue(result.calculationSteps.any { it.contains("$expectedVolume mL") })
     }
 }

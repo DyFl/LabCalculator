@@ -97,12 +97,12 @@ class CalculatorStateTest {
 
         field("Stock concentration (C₁)").performScrollTo().performTextReplacement("3")
         compose.onNodeWithText("Final concentration cannot exceed the stock concentration.").assertDoesNotExist()
-        compose.onNodeWithTag("Result card: Volume from stock (V₁)").assertDoesNotExist()
+        compose.onNodeWithTag("Result card: Preparation").assertDoesNotExist()
         compose.onNodeWithText("Calculation Steps").assertDoesNotExist()
         click("Calculate")
-        compose.onNodeWithText("33.333R mL").assertExists()
+        compose.onNodeWithText("Transfer ≈ 33.3333 mL of stock and make up to 50 mL final solution volume.").assertExists()
         field("Stock concentration (C₁)").performScrollTo().performTextReplacement("4")
-        compose.onNodeWithText("33.333R mL").assertDoesNotExist()
+        compose.onNodeWithText("Transfer ≈ 33.3333 mL of stock and make up to 50 mL final solution volume.").assertDoesNotExist()
         compose.onNodeWithText("Calculation Steps").assertDoesNotExist()
     }
 
@@ -119,7 +119,7 @@ class CalculatorStateTest {
         compose.onNodeWithText("Enter the final solution volume.").assertExists()
         select("Unit for Final concentration (C₂)", "PPM (parts per million)")
         compose.onNodeWithText("Enter the final solution volume.").assertExists()
-        field("Stock concentration (C₁)").assertTextContains("3")
+        field("Stock concentration (C₁)").assertTextContains("3000")
     }
 
     @Test
@@ -133,6 +133,7 @@ class CalculatorStateTest {
             compose.onNodeWithText(result).assertExists()
             compose.onNodeWithText("Calculation Steps").assertExists()
             select("Category", category)
+            compose.onNodeWithText("Clear and change").performClick()
             assertEmpty("Value to convert")
             compose.onNodeWithText(result).assertDoesNotExist()
             compose.onNodeWithText("Calculation Steps").assertDoesNotExist()
@@ -147,6 +148,7 @@ class CalculatorStateTest {
         click("Calculate")
         compose.onNodeWithText("Enter a valid number", substring = true).assertExists()
         select("Category", "Volume")
+        compose.onNodeWithText("Clear and change").performClick()
         assertEmpty("Value to convert")
         compose.onNodeWithText("Enter a valid number", substring = true).assertDoesNotExist()
     }
@@ -167,14 +169,14 @@ class CalculatorStateTest {
         compose.onNodeWithText("Calculation Steps").assertExists()
 
         compose.onNodeWithContentDescription("Swap units").performScrollTo().performClick()
-        field("Value to convert").assertTextContains("2")
+        field("Value to convert").assertTextContains("2000")
         compose.onNodeWithText("2000 mg").assertDoesNotExist()
         click("Calculate")
-        compose.onNodeWithText("0.002 g").assertExists()
+        compose.onNodeWithText("2 g").assertExists()
         select("Category", "Mass")
         compose.onNodeWithContentDescription("Starting unit").assertTextContains("milligrams (mg)")
         compose.onNodeWithContentDescription("Destination unit").assertTextContains("grams (g)")
-        compose.onNodeWithText("0.002 g").assertExists()
+        compose.onNodeWithText("2 g").assertExists()
 
         field("Value to convert").performScrollTo().performTextReplacement("invalid")
         click("Calculate")

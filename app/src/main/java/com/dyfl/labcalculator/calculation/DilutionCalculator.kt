@@ -2,16 +2,8 @@ package com.dyfl.labcalculator.calculation
 
 import java.math.BigDecimal
 import java.math.BigInteger
-
-enum class ConcentrationUnit(val label: String) {
-    PPM("PPM"),
-    PPB("PPB");
-
-    internal fun toPartsPerBillion(value: BigDecimal): BigDecimal = when (this) {
-        PPM -> value.multiply(BigDecimal("1000"))
-        PPB -> value
-    }
-}
+import java.math.MathContext
+import java.math.RoundingMode
 
 enum class DilutionField {
     STOCK_CONCENTRATION,
@@ -34,7 +26,10 @@ data class DilutionError(
 
 sealed interface DilutionResult {
     data class Success(
-        val volumeFromStockMl: String,
+        val volumeFromStockMl: ExactFraction,
+        val finalSolutionVolumeMl: BigDecimal,
+        val preparationInstruction: String,
+        val isApproximate: Boolean,
         val calculationSteps: List<String>
     ) : DilutionResult
     data class Invalid(val errors: List<DilutionError>) : DilutionResult
@@ -46,6 +41,8 @@ sealed interface DilutionResult {
 object DilutionCalculator {
     private const val FINAL_EXCEEDS_STOCK_MESSAGE =
         "Final concentration cannot exceed the stock concentration."
+    internal const val INCOMPATIBLE_BASIS_MESSAGE =
+        "Stock and target must use the same concentration family and basis. No parts-per to mass-per-volume conversion is assumed."
 
     /** Errors are saved as field/message pairs; only this target error also depends on stock. */
     internal fun errorsAfterEdit(
@@ -55,7 +52,7 @@ object DilutionCalculator {
         field == editedField ||
             (editedField == DilutionField.STOCK_CONCENTRATION &&
                 field == DilutionField.FINAL_CONCENTRATION &&
-                message == FINAL_EXCEEDS_STOCK_MESSAGE)
+                message in listOf(FINAL_EXCEEDS_STOCK_MESSAGE, INCOMPATIBLE_BASIS_MESSAGE))
     }
 
     fun calculate(input: DilutionInput): DilutionResult {
@@ -99,6 +96,9 @@ object DilutionCalculator {
             )
         }
 
+        if (input.stockUnit.family != input.finalUnit.family) {
+            errors += DilutionError(DilutionField.FINAL_CONCENTRATION, INCOMPATIBLE_BASIS_MESSAGE)
+        }
         if (errors.isNotEmpty()) {
             return DilutionResult.Invalid(errors)
         }
@@ -107,10 +107,11 @@ object DilutionCalculator {
         checkNotNull(finalConcentration)
         checkNotNull(finalSolutionVolume)
 
-        val stockInPpb = input.stockUnit.toPartsPerBillion(stockConcentration)
-        val finalInPpb = input.finalUnit.toPartsPerBillion(finalConcentration)
+        val stockInBase = input.stockUnit.toBase(stockConcentration)
+        val finalInBase = input.finalUnit.toBase(finalConcentration)
+        val baseUnit = input.stockUnit.baseUnit.label
 
-        if (finalInPpb > stockInPpb) {
+        if (finalInBase > stockInBase) {
             return DilutionResult.Invalid(
                 listOf(
                     DilutionError(
@@ -121,43 +122,55 @@ object DilutionCalculator {
             )
         }
 
-        val numerator = finalInPpb.multiply(finalSolutionVolume)
-        val volumeFromStock = ExactFraction.fromRatio(numerator, stockInPpb)
-        val volumeDisplay = volumeFromStock.toDisplayString()
+        val numerator = finalInBase.multiply(finalSolutionVolume)
+        val volumeFromStock = ExactFraction.fromRatio(numerator, stockInBase)
+        val volumeDisplay = volumeFromStock.toExactString()
+        // Select units before any display rounding, including values just below 1 mL.
+        val useMicroliters = volumeFromStock.numerator.signum() > 0 &&
+            volumeFromStock.numerator < volumeFromStock.denominator
+        val transfer = if (useMicroliters) volumeFromStock.times(BigInteger.valueOf(1000))
+            else volumeFromStock
+        val transferUnit = if (useMicroliters) "µL" else "mL"
+        val transferDisplay = transfer.forPreparation()
+        val finalDisplay = ExactFraction.fromRatio(finalSolutionVolume, BigDecimal.ONE).forPreparation()
+        val instruction = "Transfer ${transferDisplay.text} $transferUnit of stock and make up to " +
+            "${finalDisplay.text} mL final solution volume."
         val calculationSteps = listOf(
             "Start with C₁V₁ = C₂V₂ and rearrange: V₁ = (C₂ × V₂) ÷ C₁.",
+            "Concentration family: ${input.stockUnit.family.label}. Stock and target use the same basis; no density conversion is inferred.",
             concentrationNormalizationStep(
                 symbol = "C₁",
                 originalValue = stockConcentration,
                 originalUnit = input.stockUnit,
-                valueInPpb = stockInPpb
+                valueInBase = stockInBase
             ),
             concentrationNormalizationStep(
                 symbol = "C₂",
                 originalValue = finalConcentration,
                 originalUnit = input.finalUnit,
-                valueInPpb = finalInPpb
+                valueInBase = finalInBase
             ),
-            "Substitute: V₁ = (${finalInPpb.toGroupedExactString()} PPB × " +
+            "Substitute: V₁ = (${finalInBase.toGroupedExactString()} $baseUnit × " +
                 "${finalSolutionVolume.toGroupedExactString()} mL) ÷ " +
-                "${stockInPpb.toGroupedExactString()} PPB.",
-            "Multiply the numerator: ${finalInPpb.toGroupedExactString()} PPB × " +
+                "${stockInBase.toGroupedExactString()} $baseUnit.",
+            "Multiply the numerator: ${finalInBase.toGroupedExactString()} $baseUnit × " +
                 "${finalSolutionVolume.toGroupedExactString()} mL = " +
-                "${numerator.toGroupedExactString()} PPB·mL.",
-            "Divide and cancel PPB: ${numerator.toGroupedExactString()} PPB·mL ÷ " +
-                "${stockInPpb.toGroupedExactString()} PPB = $volumeDisplay mL.",
-            if (volumeDisplay.endsWith('R')) {
-                "Final Volume from stock = $volumeDisplay mL. R marks an exact repeating " +
-                    "decimal; no rounding was applied."
-            } else if ('/' in volumeDisplay) {
-                "Final Volume from stock = $volumeDisplay mL (exact fraction; decimal expansion is too long)."
-            } else {
-                "Final Volume from stock = $volumeDisplay mL."
-            }
+                "${numerator.toGroupedExactString()} $baseUnit·mL.",
+            "Divide and cancel $baseUnit: ${numerator.toGroupedExactString()} $baseUnit·mL ÷ " +
+                "${stockInBase.toGroupedExactString()} $baseUnit = $volumeDisplay mL.",
+            "Exact stock transfer: ${transfer.toExactString()} $transferUnit" +
+                if ('/' in volumeDisplay) " (exact fraction; nonterminating decimal)." else ".",
+            "Exact final solution volume: ${finalSolutionVolume.toExactPlainString()} mL. " +
+                "Make up to this total volume, including the stock.",
+            instruction,
+            DILUTION_DISPLAY_POLICY
         )
 
         return DilutionResult.Success(
-            volumeFromStockMl = volumeDisplay,
+            volumeFromStockMl = volumeFromStock,
+            finalSolutionVolumeMl = finalSolutionVolume,
+            preparationInstruction = instruction,
+            isApproximate = transferDisplay.isApproximate || finalDisplay.isApproximate,
             calculationSteps = calculationSteps
         )
     }
@@ -166,15 +179,12 @@ object DilutionCalculator {
         symbol: String,
         originalValue: BigDecimal,
         originalUnit: ConcentrationUnit,
-        valueInPpb: BigDecimal
-    ): String = when (originalUnit) {
-        ConcentrationUnit.PPM ->
-            "Convert $symbol: ${originalValue.toGroupedExactString()} PPM × " +
-                "(1,000 PPB ÷ 1 PPM) = ${valueInPpb.toGroupedExactString()} PPB."
-
-        ConcentrationUnit.PPB ->
-            "$symbol is already in PPB: ${originalValue.toGroupedExactString()} PPB."
-    }
+        valueInBase: BigDecimal
+    ): String = if (originalUnit == originalUnit.baseUnit)
+        "$symbol is already in ${originalUnit.label}: ${originalValue.toGroupedExactString()} ${originalUnit.label}."
+    else "Convert $symbol: ${originalValue.toGroupedExactString()} ${originalUnit.label} × " +
+        "(${originalUnit.baseMultiplier.toGroupedExactString()} ${originalUnit.baseUnit.label} ÷ 1 ${originalUnit.label}) = " +
+        "${valueInBase.toGroupedExactString()} ${originalUnit.baseUnit.label}."
 
     private fun parseNumber(
         text: String,
@@ -200,64 +210,24 @@ object DilutionCalculator {
     }
 }
 
-private class ExactFraction private constructor(
+/** Reduced rational quantity; presentation never becomes an arithmetic input. */
+@ConsistentCopyVisibility
+data class ExactFraction private constructor(
     val numerator: BigInteger,
     val denominator: BigInteger
 ) {
-    fun toDisplayString(): String {
-        if (numerator == BigInteger.ZERO) return "0"
+    fun toExactString(): String = terminatingDecimal()?.toExactPlainString()
+        ?: "$numerator/$denominator"
 
-        if (hasTerminatingDecimal()) {
-            return BigDecimal(numerator)
-                .divide(BigDecimal(denominator))
-                .stripTrailingZeros()
-                .toPlainString()
-        }
+    fun times(factor: BigInteger): ExactFraction = create(numerator.multiply(factor), denominator)
 
-        val wholePart = numerator.divide(denominator)
-        var remainder = numerator.remainder(denominator)
-        val digits = StringBuilder()
-        val remainderPositions = mutableMapOf<BigInteger, Int>()
-
-        while (remainder != BigInteger.ZERO && remainder !in remainderPositions) {
-            // Long periods can contain millions of digits; retain the exact answer as a fraction.
-            if (digits.length >= MAX_EXPANSION_DIGITS) return "$numerator/$denominator"
-            remainderPositions[remainder] = digits.length
-            remainder = remainder.multiply(BigInteger.TEN)
-            digits.append(remainder.divide(denominator))
-            remainder = remainder.remainder(denominator)
-        }
-
-        val repeatStart = checkNotNull(remainderPositions[remainder])
-        val nonRepeatingDigits = digits.substring(0, repeatStart)
-        val repeatingDigits = digits.substring(repeatStart)
-
-        return buildString {
-            append(wholePart)
-            append('.')
-            append(nonRepeatingDigits)
-            repeat(REPETITION_COUNT) { append(repeatingDigits) }
-            append('R')
-        }
-    }
-
-    private fun hasTerminatingDecimal(): Boolean {
-        var remainingDenominator = denominator
-        while (remainingDenominator.mod(TWO) == BigInteger.ZERO) {
-            remainingDenominator = remainingDenominator.divide(TWO)
-        }
-        while (remainingDenominator.mod(FIVE) == BigInteger.ZERO) {
-            remainingDenominator = remainingDenominator.divide(FIVE)
-        }
-        return remainingDenominator == BigInteger.ONE
+    internal fun terminatingDecimal(): BigDecimal? = try {
+        BigDecimal(numerator).divide(BigDecimal(denominator)).stripTrailingZeros()
+    } catch (_: ArithmeticException) {
+        null // A nonterminating expansion stays a rational quantity.
     }
 
     companion object {
-        private const val MAX_EXPANSION_DIGITS = 128
-        private const val REPETITION_COUNT = 3
-        private val TWO = BigInteger.valueOf(2)
-        private val FIVE = BigInteger.valueOf(5)
-
         fun fromRatio(numerator: BigDecimal, denominator: BigDecimal): ExactFraction {
             val numeratorFraction = numerator.toExactFraction()
             val denominatorFraction = denominator.toExactFraction()
@@ -297,4 +267,28 @@ private class ExactFraction private constructor(
             )
         }
     }
+}
+
+internal const val DILUTION_DISPLAY_POLICY =
+    "Terminating values up to 12 significant digits are shown exactly. Other values are marked ≈ " +
+        "and rounded to 6 significant digits (half up). Scientific notation keeps long values compact. " +
+        "Exact values are in Calculation Steps. Display precision does not represent pipette capability " +
+        "or measurement uncertainty."
+
+private data class PreparationDisplay(val text: String, val isApproximate: Boolean)
+
+private fun ExactFraction.forPreparation(): PreparationDisplay {
+    val exact = terminatingDecimal()
+    val approximate = exact == null || exact.precision() > 12
+    val value = if (approximate) {
+        BigDecimal(numerator).divide(BigDecimal(denominator), MathContext(6, RoundingMode.HALF_UP))
+    } else checkNotNull(exact)
+    val normalized = value.stripTrailingZeros()
+    val plain = normalized.toPlainString()
+    val compact = if (plain.length <= 16) plain else {
+        val exponent = normalized.precision() - normalized.scale() - 1
+        normalized.movePointLeft(exponent).toExactPlainString() + "E" +
+            (if (exponent >= 0) "+" else "") + exponent
+    }
+    return PreparationDisplay((if (approximate) "≈ " else "") + compact, approximate)
 }

@@ -12,6 +12,7 @@ import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetCodec
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.presets.SavePresetResult
+import com.dyfl.labcalculator.presets.PresetLoadResult
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -26,9 +27,64 @@ class PresetStoreTest {
     private val store = CalculatorPresetStore(context, preferencesName)
     private val preparation = PresetSettings.MsMsd("10", "50", ConcentrationUnit.PPM)
 
+    @Test fun massUnitPresetsSurviveReopeningAlongsideLegacyAndUnavailableRecords() {
+        val old = "1|legacy|Legacy|MS_MSD|10|50|PPB"
+        val future = "2|future|Future|MS_MSD|1|50|PPB"
+        val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD", setOf(old, future)).commit())
+        val ms = (store.save("Mass daily", PresetSettings.MsMsd("10", "0.05",
+            ConcentrationUnit.MILLIGRAM_PER_LITER)) as SavePresetResult.Saved).preset
+        val dilution = (store.save("Mass daily", PresetSettings.Dilution(DilutionInput("10",
+            ConcentrationUnit.MILLIGRAM_PER_LITER, "200", ConcentrationUnit.MICROGRAM_PER_LITER, "50")))
+            as SavePresetResult.Saved).preset
+        val reopened = CalculatorPresetStore(context, preferencesName)
+        val loaded = reopened.load(PresetKind.MS_MSD) as PresetLoadResult.PartiallyAvailable
+        assertEquals(1, loaded.unavailableRecordCount)
+        assertEquals(ms, loaded.presets.first { it.name == "Mass daily" })
+        assertEquals(ConcentrationUnit.PPB, (loaded.presets.first { it.name == "Legacy" }.settings as PresetSettings.MsMsd).concentrationUnit)
+        assertEquals(listOf(dilution), reopened.load(PresetKind.DILUTION).presets)
+        assertEquals(DeletePresetResult.Deleted, reopened.delete(ms))
+        assertEquals(setOf(old, future), preferences.getStringSet("v1_MS_MSD", null))
+    }
+
     @After
     fun cleanUp() {
         context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE).edit().clear().commit()
+    }
+
+    @Test
+    fun loadDistinguishesEveryStorageStatusWithoutChangingRecords() {
+        val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        assertEquals(PresetLoadResult.Empty, store.load(PresetKind.MS_MSD))
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD", emptySet()).commit())
+        assertEquals(PresetLoadResult.Empty, store.load(PresetKind.MS_MSD))
+        val preset = CalculatorPreset("test-id", "Daily", preparation)
+        val raw = PresetCodec.encode(preset)
+        val future = "2|future|Future|MS_MSD|1|50|PPB"
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD", setOf(raw)).commit())
+        assertEquals(PresetLoadResult.Available(listOf(preset)), store.load(PresetKind.MS_MSD))
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD", setOf(raw, future)).commit())
+        assertEquals(PresetLoadResult.PartiallyAvailable(listOf(preset), 1), store.load(PresetKind.MS_MSD))
+        assertEquals(setOf(raw, future), preferences.getStringSet("v1_MS_MSD", null))
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD", setOf(future)).commit())
+        assertEquals(PresetLoadResult.Unavailable(1), store.load(PresetKind.MS_MSD))
+        assertEquals(setOf(future), preferences.getStringSet("v1_MS_MSD", null))
+        assertTrue(preferences.edit().putString("v1_MS_MSD", "unexpected value").commit())
+        assertEquals(PresetLoadResult.Unreadable, store.load(PresetKind.MS_MSD))
+        assertEquals("unexpected value", preferences.all["v1_MS_MSD"])
+    }
+
+    @Test
+    fun deletingOnePresetPreservesDifferentRecordWithSameId() {
+        val first = CalculatorPreset("shared-id", "Daily", preparation)
+        val other = first.copy(name = "Other", settings = preparation.copy(dilutionFactor = "2.5"))
+        val otherRaw = PresetCodec.encode(other).replace("Other", "%4fther")
+        val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+        assertTrue(preferences.edit().putStringSet("v1_MS_MSD",
+            setOf(PresetCodec.encode(first), otherRaw)).commit())
+        assertEquals(DeletePresetResult.Deleted, store.delete(first))
+        assertEquals(setOf(otherRaw), preferences.getStringSet("v1_MS_MSD", null))
+        assertEquals(listOf(other), store.load(PresetKind.MS_MSD).presets)
     }
 
     @Test
@@ -37,21 +93,21 @@ class PresetStoreTest {
         val second = (store.save("Other", preparation.copy(dilutionFactor = "2.5"))
             as SavePresetResult.Saved).preset
         val reopened = CalculatorPresetStore(context, preferencesName)
-        assertEquals(listOf(first, second), reopened.load(PresetKind.MS_MSD))
+        assertEquals(listOf(first, second), reopened.load(PresetKind.MS_MSD).presets)
         assertEquals(DeletePresetResult.Deleted, reopened.delete(first))
-        assertEquals(listOf(second), CalculatorPresetStore(context, preferencesName).load(PresetKind.MS_MSD))
+        assertEquals(listOf(second), CalculatorPresetStore(context, preferencesName).load(PresetKind.MS_MSD).presets)
     }
 
     @Test
     fun duplicateNamesDoNotOverwriteAndDifferentCalculatorsAreIsolated() {
         val original = (store.save("Daily", preparation) as SavePresetResult.Saved).preset
         assertTrue(store.save(" daily ", preparation.copy(dilutionFactor = "5")) is SavePresetResult.Invalid)
-        assertEquals(listOf(original), store.load(PresetKind.MS_MSD))
+        assertEquals(listOf(original), store.load(PresetKind.MS_MSD).presets)
         val dilution = PresetSettings.Dilution(DilutionInput(
             "10", ConcentrationUnit.PPM, "200", ConcentrationUnit.PPB, "50"))
         assertTrue(store.save("Daily", dilution) is SavePresetResult.Saved)
-        assertEquals(listOf(original), store.load(PresetKind.MS_MSD))
-        assertEquals(dilution, store.load(PresetKind.DILUTION).single().settings)
+        assertEquals(listOf(original), store.load(PresetKind.MS_MSD).presets)
+        assertEquals(dilution, store.load(PresetKind.DILUTION).presets.single().settings)
     }
 
     @Test
@@ -61,13 +117,13 @@ class PresetStoreTest {
         assertTrue(preferences.edit().putStringSet("v1_MS_MSD", setOf(unreadable)).commit())
         assertTrue(store.save("", preparation) is SavePresetResult.Invalid)
         assertTrue(store.save("Invalid", preparation.copy(finalSpikeConcentration = "0")) is SavePresetResult.Invalid)
-        assertTrue(store.load(PresetKind.MS_MSD).isEmpty())
+        assertTrue(store.load(PresetKind.MS_MSD).presets.isEmpty())
         repeat(MAX_PRESETS_PER_CALCULATOR) { index ->
             assertTrue(store.save("Preset $index", preparation) is SavePresetResult.Saved)
         }
-        val existing = store.load(PresetKind.MS_MSD)
+        val existing = store.load(PresetKind.MS_MSD).presets
         assertTrue(store.save("One more", preparation) is SavePresetResult.Invalid)
-        assertEquals(existing, store.load(PresetKind.MS_MSD))
+        assertEquals(existing, store.load(PresetKind.MS_MSD).presets)
         assertTrue(preferences.getStringSet("v1_MS_MSD", emptySet())!!.contains(unreadable))
     }
 
@@ -92,7 +148,7 @@ class PresetStoreTest {
         val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
         assertTrue(preferences.edit().putStringSet("v1_MS_MSD", original)
             .putStringSet("v1_DILUTION", setOf(dilutionRecord)).commit())
-        assertEquals(listOf(first, second), store.load(PresetKind.MS_MSD))
+        assertEquals(listOf(first, second), store.load(PresetKind.MS_MSD).presets)
 
         val saved = (store.save("New", preparation) as SavePresetResult.Saved).preset
         val savedRecord = PresetCodec.encode(saved)
@@ -103,9 +159,9 @@ class PresetStoreTest {
         assertEquals(DeletePresetResult.Deleted, store.delete(first))
         assertEquals(unrelated + secondRecord + savedRecord,
             preferences.getStringSet("v1_MS_MSD", emptySet()))
-        assertEquals(listOf(saved, second), CalculatorPresetStore(context, preferencesName).load(PresetKind.MS_MSD))
+        assertEquals(listOf(saved, second), CalculatorPresetStore(context, preferencesName).load(PresetKind.MS_MSD).presets)
         assertEquals(setOf(dilutionRecord), preferences.getStringSet("v1_DILUTION", emptySet()))
-        assertEquals(listOf(dilution), store.load(PresetKind.DILUTION))
+        assertEquals(listOf(dilution), store.load(PresetKind.DILUTION).presets)
     }
 
     @Test
@@ -120,7 +176,7 @@ class PresetStoreTest {
                 is Boolean -> editor.putBoolean("v1_MS_MSD", value)
             }
             assertTrue(editor.commit())
-            assertTrue(store.load(PresetKind.MS_MSD).isEmpty())
+            assertEquals(PresetLoadResult.Unreadable, store.load(PresetKind.MS_MSD))
             val saveResult = store.save("New", preparation) as SavePresetResult.Invalid
             assertTrue(saveResult.message.contains("could not be read safely"))
             val deleteResult = store.delete(preset) as DeletePresetResult.Invalid
@@ -137,7 +193,7 @@ class PresetStoreTest {
             val writer = CalculatorPresetStore(context, preferencesName)
             assertTrue(writer.save("Daily", preparation) is SavePresetResult.Saved)
             assertTrue(changed.await(5, TimeUnit.SECONDS))
-            assertEquals(preparation, store.load(PresetKind.MS_MSD).single().settings)
+            assertEquals(preparation, store.load(PresetKind.MS_MSD).presets.single().settings)
         } finally {
             unsubscribe()
         }

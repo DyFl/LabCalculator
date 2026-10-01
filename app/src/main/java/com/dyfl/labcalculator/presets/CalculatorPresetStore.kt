@@ -3,7 +3,6 @@ package com.dyfl.labcalculator.presets
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
-import java.util.Locale
 import java.util.UUID
 
 internal sealed interface SavePresetResult {
@@ -23,8 +22,10 @@ internal class CalculatorPresetStore(
     private val preferences = context.applicationContext
         .getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
 
-    fun load(kind: PresetKind): List<CalculatorPreset> =
-        validPresets(readRecords(kind).orEmpty(), kind)
+    fun load(kind: PresetKind): PresetLoadResult {
+        val records = readRecords(kind) ?: return PresetLoadResult.Unreadable
+        return loadPresetRecords(records, kind)
+    }
 
     /** Null means the stored value cannot be safely rewritten as a set of records. */
     private fun readRecords(kind: PresetKind): Set<String>? {
@@ -33,11 +34,6 @@ internal class CalculatorPresetStore(
         // SharedPreferences collections must never be modified in place.
         return value.filterIsInstance<String>().toSet()
     }
-
-    private fun validPresets(records: Set<String>, kind: PresetKind): List<CalculatorPreset> =
-        records.mapNotNull(PresetCodec::decode)
-            .filter { it.settings.kind == kind }
-            .sortedBy { it.name.lowercase(Locale.ROOT) }
 
     /** Call writes off the UI thread so disk completion can be checked. */
     fun save(name: String, settings: PresetSettings): SavePresetResult {
@@ -49,7 +45,7 @@ internal class CalculatorPresetStore(
         settings.validationError()?.let { return SavePresetResult.Invalid(it) }
         val records = readRecords(settings.kind)
             ?: return SavePresetResult.Invalid(UNREADABLE_STORAGE_MESSAGE)
-        val existing = validPresets(records, settings.kind)
+        val existing = loadPresetRecords(records, settings.kind).presets
         if (existing.any { it.name.equals(trimmedName, ignoreCase = true) }) {
             return SavePresetResult.Invalid("A preset with this name already exists.")
         }
@@ -67,7 +63,7 @@ internal class CalculatorPresetStore(
             ?: return DeletePresetResult.Invalid(UNREADABLE_STORAGE_MESSAGE)
         val remaining = records.filterNot { record ->
             val decoded = PresetCodec.decode(record)
-            decoded != null && decoded.settings.kind == kind && decoded.id == preset.id
+            decoded == preset
         }.toSet()
         return if (write(kind, remaining)) DeletePresetResult.Deleted
         else DeletePresetResult.Invalid("Could not delete the preset. Please try again.")

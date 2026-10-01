@@ -15,8 +15,8 @@ class CalculationAuditTest {
             stockConcentration = "1000000007", finalConcentration = "1",
             finalUnit = ConcentrationUnit.PPM, finalSolutionVolumeMl = "1"
         )) as DilutionResult.Success
-        assertEquals("1/1000000007", result.volumeFromStockMl)
-        assertTrue(result.calculationSteps.last().contains("exact fraction"))
+        assertEquals("1/1000000007", result.volumeFromStockMl.toExactString())
+        assertTrue(result.calculationSteps.any { it.contains("exact fraction") })
     }
 
     @Test
@@ -24,9 +24,9 @@ class CalculationAuditTest {
         fun volume(stock: String) = (DilutionCalculator.calculate(dilution.copy(
             stockConcentration = stock, finalConcentration = "1",
             finalUnit = ConcentrationUnit.PPM, finalSolutionVolumeMl = "1"
-        )) as DilutionResult.Success).volumeFromStockMl
-        assertEquals("0.1666R", volume("6"))
-        assertEquals("0.142857142857142857R", volume("7"))
+        )) as DilutionResult.Success).volumeFromStockMl.toExactString()
+        assertEquals("1/6", volume("6"))
+        assertEquals("1/7", volume("7"))
     }
 
     @Test
@@ -39,7 +39,7 @@ class CalculationAuditTest {
                 finalUnit = ConcentrationUnit.PPM, finalSolutionVolumeMl = "1e-100") to BigDecimal("1e-100").toPlainString()
         )
         cases.forEach { (input, expected) ->
-            assertEquals(expected, (DilutionCalculator.calculate(input) as DilutionResult.Success).volumeFromStockMl)
+            assertEquals(expected, (DilutionCalculator.calculate(input) as DilutionResult.Success).volumeFromStockMl.toExactString())
         }
     }
 

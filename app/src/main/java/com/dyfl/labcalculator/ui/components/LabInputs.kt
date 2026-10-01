@@ -265,12 +265,7 @@ internal fun LabConcentrationInput(
     imeAction: ImeAction = ImeAction.Next
 ) = LabNumberWithUnit(label, value, onValueChange, unit, ConcentrationUnit.entries,
     unitText = { it.label }, onUnitChange = onUnitChange,
-    menuText = {
-        when (it) {
-            ConcentrationUnit.PPM -> "PPM (parts per million)"
-            ConcentrationUnit.PPB -> "PPB (parts per billion)"
-        }
-    }, error = error, supportingText = supportingText, imeAction = imeAction)
+    menuText = { it.description }, error = error, supportingText = supportingText, imeAction = imeAction)
 
 @Composable
 internal fun LabInfoRow(text: String) {

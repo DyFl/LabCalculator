@@ -203,6 +203,7 @@ object MsMsdCalculator {
                 steps = listOf(
                     "Original source concentration = $rawSource $unit × $dilutionFactor.",
                     "Original source concentration = $originalSource $unit.",
+                    "Concentration family: ${calculation.concentrationUnit.family.label}. $MS_MSD_BASIS_GUIDANCE",
                     "The dilution factor applies only to the native sample contribution.",
                     "The $spike $unit spike was added after dilution and is not multiplied by " +
                         "$dilutionFactor."

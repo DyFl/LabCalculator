@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -20,6 +21,10 @@ import com.dyfl.labcalculator.calculation.DilutionCalculator
 import com.dyfl.labcalculator.calculation.DilutionField
 import com.dyfl.labcalculator.calculation.DilutionInput
 import com.dyfl.labcalculator.calculation.DilutionResult
+import com.dyfl.labcalculator.calculation.DILUTION_DISPLAY_POLICY
+import com.dyfl.labcalculator.calculation.CONCENTRATION_CHANGE_GUIDANCE
+import com.dyfl.labcalculator.calculation.UnitChanges
+import com.dyfl.labcalculator.calculation.UnitChangeResult
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
@@ -34,41 +39,76 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
     var finalSolutionVolume by rememberSaveable { mutableStateOf("") }
     var stockUnitName by rememberSaveable { mutableStateOf(ConcentrationUnit.PPM.name) }
     var finalUnitName by rememberSaveable { mutableStateOf(ConcentrationUnit.PPB.name) }
-    var volumeFromStock by rememberSaveable { mutableStateOf("") }
-    var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
+    var calculated by rememberSaveable { mutableStateOf(false) }
     var errors by rememberSaveable { mutableStateOf(emptyMap<DilutionField, String>()) }
+    var unitChangeMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingUnitName by rememberSaveable { mutableStateOf<String?>(null) }
 
     val stockUnit = ConcentrationUnit.valueOf(stockUnitName)
     val finalUnit = ConcentrationUnit.valueOf(finalUnitName)
+    val input = DilutionInput(stockConcentration, stockUnit, finalConcentration,
+        finalUnit, finalSolutionVolume)
+    // Restore exact working from original inputs, never from a rounded display string.
+    val result = remember(input, calculated) {
+        if (calculated) DilutionCalculator.calculate(input) as? DilutionResult.Success else null
+    }
 
     fun clearResultAndError(field: DilutionField) {
-        volumeFromStock = ""
-        calculationStepsEncoded = ""
+        calculated = false
+        unitChangeMessage = null
         errors = DilutionCalculator.errorsAfterEdit(errors, field)
     }
 
+    fun changeUnit(unit: ConcentrationUnit, stock: Boolean) {
+        val current = if (stock) stockUnit else finalUnit
+        if (unit == current) return
+        val value = if (stock) stockConcentration else finalConcentration
+        when (val change = UnitChanges.concentrations(listOf(value), current, unit)) {
+            is UnitChangeResult.Converted -> {
+                if (stock) {
+                    stockConcentration = change.values.single()
+                    stockUnitName = unit.name
+                } else {
+                    finalConcentration = change.values.single()
+                    finalUnitName = unit.name
+                }
+                calculated = false
+                unitChangeMessage = null
+                // Quantities are unchanged, so existing validation errors remain relevant.
+            }
+            is UnitChangeResult.Blocked -> unitChangeMessage = change.message
+            UnitChangeResult.ResetRequired -> pendingUnitName = unit.name
+        }
+    }
+
+    if (pendingUnitName != null) UnitResetDialog(
+        description = "No conversion between these concentration families is supported. Clear stock and target, " +
+            "select ${ConcentrationUnit.valueOf(checkNotNull(pendingUnitName)).label} for both, and re-enter. Final volume stays.",
+        onCancel = { pendingUnitName = null },
+        onReset = {
+            stockUnitName = checkNotNull(pendingUnitName)
+            finalUnitName = checkNotNull(pendingUnitName)
+            stockConcentration = ""
+            finalConcentration = ""
+            errors = errors.filterKeys { it == DilutionField.FINAL_SOLUTION_VOLUME }
+            calculated = false
+            unitChangeMessage = null
+            pendingUnitName = null
+        }
+    )
+
     fun calculate() {
         when (
-            val result = DilutionCalculator.calculate(
-                DilutionInput(
-                    stockConcentration = stockConcentration,
-                    stockUnit = stockUnit,
-                    finalConcentration = finalConcentration,
-                    finalUnit = finalUnit,
-                    finalSolutionVolumeMl = finalSolutionVolume
-                )
-            )
+            val calculation = DilutionCalculator.calculate(input)
         ) {
             is DilutionResult.Success -> {
-                volumeFromStock = result.volumeFromStockMl
-                calculationStepsEncoded = encodeCalculationSteps(result.calculationSteps)
+                calculated = true
                 errors = emptyMap()
             }
 
             is DilutionResult.Invalid -> {
-                volumeFromStock = ""
-                calculationStepsEncoded = ""
-                errors = result.errors.associate { it.field to it.message }
+                calculated = false
+                errors = calculation.errors.associate { it.field to it.message }
             }
         }
     }
@@ -97,11 +137,17 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                     finalConcentration = input.finalConcentration
                     finalUnitName = input.finalUnit.name
                     finalSolutionVolume = input.finalSolutionVolumeMl
-                    volumeFromStock = ""
-                    calculationStepsEncoded = ""
+                    calculated = false
                     errors = emptyMap()
+                    unitChangeMessage = null
+                    pendingUnitName = null
                 }
             )
+            LabInfoRow("Concentration family: ${stockUnit.family.label}. " +
+                "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
+            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
+            UnitChangeMessage(unitChangeMessage)
+            Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             LabConcentrationInput(
                 label = "Stock concentration (C₁)",
                 value = stockConcentration,
@@ -110,10 +156,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                     clearResultAndError(DilutionField.STOCK_CONCENTRATION)
                 },
                 unit = stockUnit,
-                onUnitChange = {
-                    stockUnitName = it.name
-                    clearResultAndError(DilutionField.STOCK_CONCENTRATION)
-                },
+                onUnitChange = { changeUnit(it, stock = true) },
                 error = errors[DilutionField.STOCK_CONCENTRATION]
             )
 
@@ -127,10 +170,7 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                     clearResultAndError(DilutionField.FINAL_CONCENTRATION)
                 },
                 unit = finalUnit,
-                onUnitChange = {
-                    finalUnitName = it.name
-                    clearResultAndError(DilutionField.FINAL_CONCENTRATION)
-                },
+                onUnitChange = { changeUnit(it, stock = false) },
                 error = errors[DilutionField.FINAL_CONCENTRATION],
                 supportingText = "Use the same concentration basis for stock and target."
             )
@@ -159,22 +199,26 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                 finalSolutionVolume = ""
                 stockUnitName = ConcentrationUnit.PPM.name
                 finalUnitName = ConcentrationUnit.PPB.name
-                volumeFromStock = ""
-                calculationStepsEncoded = ""
+                calculated = false
                 errors = emptyMap()
+                unitChangeMessage = null
+                pendingUnitName = null
             })
         }
 
-        if (volumeFromStock.isNotEmpty()) {
+        if (result != null) {
             Spacer(modifier = Modifier.height(LabGroupSpacing))
-            LabResultCard(label = "Volume from stock (V₁)", value = "$volumeFromStock mL")
-        }
-
-        if (calculationStepsEncoded.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(14.dp))
-            CalculationStepsCard(
-                steps = decodeCalculationSteps(calculationStepsEncoded)
+            LabResultCard(
+                label = "Preparation",
+                value = result.preparationInstruction,
+                valueStyle = MaterialTheme.typography.titleLarge,
+                supportingText = if (result.isApproximate)
+                    "≈ marks an approximation. Exact values are in Calculation Steps. " +
+                        "Display precision does not represent pipette capability or measurement uncertainty."
+                    else null
             )
+            Spacer(modifier = Modifier.height(14.dp))
+            CalculationStepsCard(steps = result.calculationSteps)
         }
     }
 }
@@ -189,19 +233,21 @@ private fun EquationCard() {
             color = LabBlue
         )
         Text(
-            text = "V₁ (mL) = [C₂ (PPB) × V₂ (mL)] ÷ C₁ (PPB)",
+            text = "V₁ (mL) = [C₂ × V₂ (mL)] ÷ C₁, using matching concentration units",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Both concentrations are converted to PPB first (1 PPM = 1,000 PPB). Use matching concentration bases; ppm ≈ mg/L only for dilute water solutions. Make up to the final volume, not that volume of solvent.",
+            text = "1 PPM = 1,000 PPB on the same parts-per basis; 1 mg/L = 1,000 µg/L. " +
+                "Only conversions within a family are supported. No density is inferred. " +
+                "Make up to the final volume, including the stock.",
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Short repeating results end in R (for example, 0.333R). Long expansions use an exact fraction in mL. No measurement precision is inferred.",
+            text = DILUTION_DISPLAY_POLICY,
             style = MaterialTheme.typography.bodySmall,
             color = LabMutedText
         )

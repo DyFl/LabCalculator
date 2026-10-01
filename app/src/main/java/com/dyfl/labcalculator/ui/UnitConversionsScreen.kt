@@ -18,6 +18,8 @@ import com.dyfl.labcalculator.calculation.MetricUnit
 import com.dyfl.labcalculator.calculation.UnitCategory
 import com.dyfl.labcalculator.calculation.UnitConversionResult
 import com.dyfl.labcalculator.calculation.UnitConverter
+import com.dyfl.labcalculator.calculation.UnitChanges
+import com.dyfl.labcalculator.calculation.UnitChangeResult
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
@@ -34,17 +36,50 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
     var convertedValue by rememberSaveable { mutableStateOf("") }
     var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
     var inputError by rememberSaveable { mutableStateOf<String?>(null) }
+    var unitChangeMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
 
     val category = UnitCategory.valueOf(categoryName)
     val categoryUnits = MetricUnit.forCategory(category)
     val fromUnit = MetricUnit.valueOf(fromUnitName)
     val toUnit = MetricUnit.valueOf(toUnitName)
 
-    fun clearResult() {
+    fun clearResult(clearError: Boolean = false) {
         convertedValue = ""
         calculationStepsEncoded = ""
-        inputError = null
+        if (clearError) inputError = null
+        unitChangeMessage = null
     }
+
+    fun changeStartingUnit(unit: MetricUnit, swap: Boolean = false) {
+        if (unit == fromUnit && !swap) return
+        when (val change = UnitChanges.metric(listOf(inputValue), fromUnit, unit)) {
+            is UnitChangeResult.Converted -> {
+                inputValue = change.values.single()
+                if (swap) toUnitName = fromUnitName
+                fromUnitName = unit.name
+                clearResult()
+            }
+            is UnitChangeResult.Blocked -> unitChangeMessage = change.message
+            UnitChangeResult.ResetRequired -> error("Starting units must be in the same category.")
+        }
+    }
+
+    if (pendingCategoryName != null) UnitResetDialog(
+        description = "Changing category cannot convert the entered quantity. Clear the input and results, " +
+            "select ${UnitCategory.valueOf(checkNotNull(pendingCategoryName)).displayName}, and re-enter the value.",
+        onCancel = { pendingCategoryName = null },
+        onReset = {
+            val selectedCategory = UnitCategory.valueOf(checkNotNull(pendingCategoryName))
+            val units = MetricUnit.forCategory(selectedCategory)
+            categoryName = selectedCategory.name
+            fromUnitName = units.getOrElse(1) { units.first() }.name
+            toUnitName = units.first().name
+            inputValue = ""
+            clearResult(clearError = true)
+            pendingCategoryName = null
+        }
+    )
 
     fun calculate() {
         when (val result = UnitConverter.convert(inputValue, fromUnit, toUnit)) {
@@ -76,7 +111,7 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 color = LabBlue
             )
             Text(
-                text = "Only units within the selected category can be converted.",
+                text = "Only units within the selected category can be converted. Mass-per-volume units do not imply a parts-per basis or density.",
                 style = MaterialTheme.typography.bodySmall,
                 color = LabMutedText
             )
@@ -94,7 +129,8 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                     fromUnitName = conversion.fromUnit.name
                     toUnitName = conversion.toUnit.name
                     inputValue = ""
-                    clearResult()
+                    clearResult(clearError = true)
+                    pendingCategoryName = null
                 }
             )
             LabDropdown(
@@ -104,36 +140,29 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 buttonText = { it.displayName },
                 onSelected = { selectedCategory ->
                     if (selectedCategory == category) return@LabDropdown
-                    val units = MetricUnit.forCategory(selectedCategory)
-                    categoryName = selectedCategory.name
-                    fromUnitName = units.getOrElse(1) { units.first() }.name
-                    toUnitName = units.first().name
-                    inputValue = ""
-                    clearResult()
+                    pendingCategoryName = selectedCategory.name
                 },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
 
+            LabInfoRow("Changing the starting unit or swapping converts the entered quantity exactly. " +
+                "Blank input stays blank; invalid input blocks the change. Destination changes only choose the output unit. " +
+                "A category change clears the value for re-entry.")
+            UnitChangeMessage(unitChangeMessage)
             LabDropdown(
                 label = "Starting unit",
                 selected = fromUnit,
                 options = categoryUnits,
                 buttonText = { "${it.displayName} (${it.symbol})" },
-                onSelected = {
-                    fromUnitName = it.name
-                    clearResult()
-                },
+                onSelected = { changeStartingUnit(it) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             LabSwapUnitsButton(onClick = {
-                val oldFromUnitName = fromUnitName
-                fromUnitName = toUnitName
-                toUnitName = oldFromUnitName
-                clearResult()
+                changeStartingUnit(toUnit, swap = true)
             })
 
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
@@ -143,8 +172,10 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 options = categoryUnits,
                 buttonText = { "${it.displayName} (${it.symbol})" },
                 onSelected = {
-                    toUnitName = it.name
-                    clearResult()
+                    if (it != toUnit) {
+                        toUnitName = it.name
+                        clearResult()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -156,7 +187,7 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 value = inputValue,
                 onValueChange = {
                     inputValue = it
-                    clearResult()
+                    clearResult(clearError = true)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 suffix = fromUnit.symbol,
@@ -171,6 +202,8 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 convertedValue = ""
                 calculationStepsEncoded = ""
                 inputError = null
+                unitChangeMessage = null
+                pendingCategoryName = null
             })
         }
 

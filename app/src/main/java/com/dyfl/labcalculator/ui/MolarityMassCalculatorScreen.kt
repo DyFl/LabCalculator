@@ -20,6 +20,8 @@ import com.dyfl.labcalculator.calculation.MolarityMassField
 import com.dyfl.labcalculator.calculation.MolarityMassInput
 import com.dyfl.labcalculator.calculation.MolarityMassResult
 import com.dyfl.labcalculator.calculation.MolarityVolumeUnit
+import com.dyfl.labcalculator.calculation.UnitChanges
+import com.dyfl.labcalculator.calculation.UnitChangeResult
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
@@ -36,11 +38,13 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
     var requiredMass by rememberSaveable { mutableStateOf("") }
     var calculationStepsEncoded by rememberSaveable { mutableStateOf("") }
     var errors by rememberSaveable { mutableStateOf(emptyMap<MolarityMassField, String>()) }
+    var unitChangeMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val volumeUnit = MolarityVolumeUnit.valueOf(volumeUnitName)
 
     fun clearResultAndError(field: MolarityMassField) {
         requiredMass = ""
         calculationStepsEncoded = ""
+        unitChangeMessage = null
         errors = errors - field
     }
 
@@ -111,6 +115,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                     requiredMass = ""
                     calculationStepsEncoded = ""
                     errors = emptyMap()
+                    unitChangeMessage = null
                 }
             )
             LabNumberTextField(
@@ -136,12 +141,25 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 options = MolarityVolumeUnit.entries,
                 unitText = { it.label },
                 onUnitChange = {
-                    volumeUnitName = it.name
-                    clearResultAndError(MolarityMassField.FINAL_SOLUTION_VOLUME)
+                    if (it != volumeUnit) {
+                        when (val change = UnitChanges.metric(listOf(finalSolutionVolume), volumeUnit.metricUnit, it.metricUnit)) {
+                            is UnitChangeResult.Converted -> {
+                                finalSolutionVolume = change.values.single()
+                                volumeUnitName = it.name
+                                requiredMass = ""
+                                calculationStepsEncoded = ""
+                                unitChangeMessage = null
+                            }
+                            is UnitChangeResult.Blocked -> unitChangeMessage = change.message
+                            UnitChangeResult.ResetRequired -> error("Volume units must be compatible.")
+                        }
+                    }
                 },
                 error = errors[MolarityMassField.FINAL_SOLUTION_VOLUME],
-                supportingText = "Use the final solution volume, including the reagent."
+                supportingText = "Use the final solution volume, including the reagent. Unit changes convert " +
+                    "the quantity exactly; blanks stay blank and invalid numbers block the change."
             )
+            UnitChangeMessage(unitChangeMessage)
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
             LabNumberTextField(
@@ -166,6 +184,7 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
                 requiredMass = ""
                 calculationStepsEncoded = ""
                 errors = emptyMap()
+                unitChangeMessage = null
             })
         }
 

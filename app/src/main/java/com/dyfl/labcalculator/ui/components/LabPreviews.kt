@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -16,6 +17,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.dyfl.labcalculator.calculation.ConcentrationUnit
+import com.dyfl.labcalculator.calculation.CONCENTRATION_CHANGE_GUIDANCE
+import com.dyfl.labcalculator.calculation.MS_MSD_BASIS_GUIDANCE
 import com.dyfl.labcalculator.calculation.MetricUnit
 import com.dyfl.labcalculator.calculation.MolarityVolumeUnit
 import com.dyfl.labcalculator.calculation.UnitCategory
@@ -65,14 +68,18 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
             LabFormulaCard { Text("Formula and input assumptions") }
             Spacer(Modifier.height(14.dp))
             if (tab == LabPreviewTab.MS_MSD) {
-                LabInfoRow("All concentrations are in PPB. " +
-                    "Changing the unit does not convert entered values.")
+                LabInfoRow("All concentrations are in PPB.")
+                LabInfoRow(MS_MSD_BASIS_GUIDANCE)
                 Spacer(Modifier.height(LabFieldSpacing))
             }
             LabInputsCard {
                 Column {
                     when (tab) {
                         LabPreviewTab.DILUTION -> {
+                            LabInfoRow("Concentration family: Parts per: matching ratio basis. " +
+                                "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
+                            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
+                            Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabConcentrationInput("Stock concentration (C₁)", if (filled) "10" else "", {},
                                 ConcentrationUnit.PPM, {},
                                 error = if (error) "Enter the stock concentration." else null)
@@ -112,23 +119,27 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                                 imeAction = ImeAction.Done)
                         }
                         LabPreviewTab.MS_MSD -> {
-                            LabConcentrationInput("Raw diluted source-sample result", if (filled) "5" else "", {},
-                                ConcentrationUnit.PPB, {}, error = if (error) "Enter the raw source result." else null,
-                                supportingText = "Uncorrected measured result, before applying the dilution factor.")
+                            Text("Preparation settings", style = MaterialTheme.typography.titleSmall)
+                            LabDropdown("Shared concentration unit", ConcentrationUnit.PPB, ConcentrationUnit.entries,
+                                buttonText = { it.label }, menuText = { it.description }, onSelected = {},
+                                supportingText = "Parts per: matching ratio basis. Applies to source, spike, MS and MSD.")
+                            LabInfoRow(CONCENTRATION_CHANGE_GUIDANCE)
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabNumberTextField(if (filled) "10" else "1", {}, label = "Sample dilution factor",
                                 supportingText = "Positive factors, including decimals, are accepted.")
                             Spacer(Modifier.height(LabGroupSpacing))
-                            LabConcentrationInput("Final spike concentration added", if (filled) "50" else "", {},
-                                ConcentrationUnit.PPB, {}, error = null,
+                            LabNumberTextField(if (filled) "50" else "", {}, label = "Final spike concentration added", suffix = "PPB",
                                 supportingText = "Final concentration added to each diluted aliquot after sample dilution.")
                             Spacer(Modifier.height(LabGroupSpacing))
-                            LabConcentrationInput("Literal MS result", if (filled) "55" else "", {},
-                                ConcentrationUnit.PPB, {}, error = null,
+                            Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall)
+                            LabNumberTextField(if (filled) "5" else "", {}, label = "Raw diluted source-sample result", suffix = "PPB",
+                                error = if (error) "Enter the raw source result." else null,
+                                supportingText = "Uncorrected measured result, before applying the dilution factor.")
+                            Spacer(Modifier.height(LabRelatedFieldSpacing))
+                            LabNumberTextField(if (filled) "55" else "", {}, label = "Literal MS result", suffix = "PPB",
                                 supportingText = "Uncorrected MS result, on the same dilution basis as the source.")
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
-                            LabConcentrationInput("Literal MSD result", if (filled) "50" else "", {},
-                                ConcentrationUnit.PPB, {}, error = null, imeAction = ImeAction.Done,
+                            LabNumberTextField(if (filled) "50" else "", {}, label = "Literal MSD result", suffix = "PPB", imeAction = ImeAction.Done,
                                 supportingText = "Uncorrected MSD result, on the same dilution basis as the source.")
                         }
                         LabPreviewTab.MOLARITY -> {
@@ -153,7 +164,9 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                 Spacer(Modifier.height(LabGroupSpacing))
                 CompositionLocalProvider(LocalCalculationRequest provides 1) {
                     when (tab) {
-                        LabPreviewTab.DILUTION -> LabResultCard("Volume from stock (V₁)", "1 mL")
+                        LabPreviewTab.DILUTION -> LabResultCard("Preparation",
+                            "Transfer 1 mL of stock and make up to 50 mL final solution volume.",
+                            valueStyle = MaterialTheme.typography.titleLarge)
                         LabPreviewTab.RPD -> LabResultCard("Relative Percent Difference", "18.18%")
                         LabPreviewTab.CONVERT -> LabResultCard("Converted result", "1000 µg/L")
                         LabPreviewTab.MOLARITY -> LabResultCard("Required Mass", "58.440 g")

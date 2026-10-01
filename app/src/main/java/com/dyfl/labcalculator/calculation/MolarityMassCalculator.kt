@@ -4,14 +4,14 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
 
-enum class MolarityVolumeUnit(val label: String) {
-    MILLILITER("mL"),
-    LITER("L");
+enum class MolarityVolumeUnit(val metricUnit: MetricUnit) {
+    MILLILITER(MetricUnit.MILLILITER),
+    LITER(MetricUnit.LITER);
 
-    internal fun toLiters(value: BigDecimal): BigDecimal = when (this) {
-        MILLILITER -> value.movePointLeft(3)
-        LITER -> value
-    }
+    val label: String get() = metricUnit.symbol
+
+    internal fun toLiters(value: BigDecimal): BigDecimal =
+        value.multiply(metricUnit.baseUnitMultiplier.divide(MetricUnit.LITER.baseUnitMultiplier))
 }
 
 enum class MolarityMassField {
