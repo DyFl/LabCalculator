@@ -7,10 +7,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -40,6 +46,8 @@ import com.dyfl.labcalculator.presets.SavePresetResult
 import com.dyfl.labcalculator.presets.validationError
 import com.dyfl.labcalculator.ui.theme.LabError
 import com.dyfl.labcalculator.ui.theme.LabMutedText
+import com.dyfl.labcalculator.ui.theme.LabControlShape
+import com.dyfl.labcalculator.ui.theme.LabFieldSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +77,11 @@ internal fun PresetControls(
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val settingsSnapshot = currentSettings()
+    val presetButtonColors = ButtonDefaults.outlinedButtonColors(
+        contentColor = MaterialTheme.colorScheme.primary,
+        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    )
     LaunchedEffect(settingsSnapshot) { error = null }
     DisposableEffect(store, kind) {
         val unsubscribe = store?.let { observedStore ->
@@ -78,7 +91,7 @@ internal fun PresetControls(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = {
                     error = null
@@ -86,8 +99,15 @@ internal fun PresetControls(
                     showLoadDialog = true
                 },
                 enabled = store != null && presets.isNotEmpty(),
-                modifier = Modifier.weight(1f)
-            ) { Text("Load preset") }
+                colors = presetButtonColors,
+                shape = LabControlShape,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+            ) {
+                Icon(LabIcons.FolderOpen, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Load preset", modifier = Modifier.weight(1f))
+            }
             OutlinedButton(
                 onClick = {
                     error = currentSettings().validationError()
@@ -98,14 +118,24 @@ internal fun PresetControls(
                     }
                 },
                 enabled = store != null,
-                modifier = Modifier.weight(1f)
-            ) { Text("Save preset") }
+                colors = presetButtonColors,
+                shape = LabControlShape,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+            ) {
+                Icon(LabIcons.Save, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Save preset", modifier = Modifier.weight(1f))
+            }
         }
-        Text(description, style = MaterialTheme.typography.bodySmall, color = LabMutedText)
+        if (presets.isEmpty()) {
+            Text("No saved presets", modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                style = MaterialTheme.typography.bodySmall, color = LabMutedText)
+        }
         if (error != null && !showLoadDialog) {
             Text(checkNotNull(error), color = LabError, style = MaterialTheme.typography.bodySmall)
         }
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(LabFieldSpacing))
     }
 
     if (showSaveDialog) {
@@ -113,21 +143,28 @@ internal fun PresetControls(
             onDismissRequest = { if (!busy) showSaveDialog = false },
             title = { Text("Save preset") },
             text = {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it.take(MAX_PRESET_NAME_LENGTH)
-                        nameError = null
-                    },
-                    label = { Text("Preset name") },
-                    singleLine = true,
-                    enabled = !busy,
-                    isError = nameError != null,
-                    supportingText = { nameError?.let { Text(it, color = LabError) } }
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = LabMutedText)
+                    OutlinedTextField(
+                        shape = LabControlShape,
+                        value = name,
+                        onValueChange = {
+                            name = it.take(MAX_PRESET_NAME_LENGTH)
+                            nameError = null
+                        },
+                        label = { Text("Preset name") },
+                        singleLine = true,
+                        enabled = !busy,
+                        isError = nameError != null,
+                        supportingText = { nameError?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = LabError)
+                        } }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
+                    shape = LabControlShape,
                     enabled = !busy && store != null,
                     onClick = {
                         val settings = currentSettings()
@@ -150,7 +187,8 @@ internal fun PresetControls(
                 ) { Text(if (busy) "Saving…" else "Save") }
             },
             dismissButton = {
-                TextButton(enabled = !busy, onClick = { showSaveDialog = false }) { Text("Cancel") }
+                TextButton(shape = LabControlShape, enabled = !busy,
+                    onClick = { showSaveDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -166,6 +204,7 @@ internal fun PresetControls(
                     presets.forEach { preset ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedButton(
+                                shape = LabControlShape,
                                 enabled = !busy,
                                 onClick = {
                                     onApply(preset.settings)
@@ -175,6 +214,7 @@ internal fun PresetControls(
                                 modifier = Modifier.weight(1f)
                             ) { Text(preset.name) }
                             TextButton(
+                                shape = LabControlShape,
                                 enabled = !busy,
                                 onClick = {
                                     busy = true
@@ -199,7 +239,8 @@ internal fun PresetControls(
                 }
             },
             confirmButton = {
-                TextButton(enabled = !busy, onClick = { showLoadDialog = false }) { Text("Close") }
+                TextButton(shape = LabControlShape, enabled = !busy,
+                    onClick = { showLoadDialog = false }) { Text("Close") }
             }
         )
     }

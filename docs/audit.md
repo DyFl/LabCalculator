@@ -117,3 +117,36 @@ Prepared `1.0.2-preview.1` with Android version code `3`. The rebuilt APK's pack
 The signing certificate matches the published v1.0.1 Preview 1 APK, allowing an update without uninstalling. The published v1.0.0 Preview 1 APK's certificate was also checked and differs; the README retains its uninstall/reinstall instructions. The release includes the APK and a checksum file.
 
 APK SHA-256: `F88FDF05E798800C39099447F2C4137B4590A2E62594A7C374C23D3FD0422CD2`.
+
+## Interface polish — 2026-09-29
+
+The calculators now use a light gray background, white forms, neutral reference cards, and a subtle teal result background. Numeric fields have one label above the input, and unit selectors use the same corner shape and align with the input controls. Presets use compact text actions; their explanation appears in the save dialog. **Formula and assumptions** starts collapsed and retains its expansion state across tab changes and Android restoration. Essential volume, reagent, and dilution-basis guidance remains beside the fields. Calculation engines, rounding, and preset storage are unchanged.
+
+- **Unit tests:** 68 passed, zero failures or errors.
+- **Build and lint:** debug and instrumentation APKs built; lint completed with zero errors and the same 15 warnings.
+- **Android tests:** all 13 passed on BlueStacks Pie64, Android 9 / API 28, including at 360 dp width with 150% text. The new test checks optional formula details and restored expansion state; the preset workflow also checks the explanation in the save dialog. Final APK results are in `app/build/reports/polish/android-tests-final.txt`.
+- **Visual checks:** inspected all five calculators at 360 dp width with 150% text. Corrected unit-label and Calculate-button wrapping, verified direct numeric entry and a 1 mL dilution result, and refreshed the README screenshot. The emulator's original display configuration is restored after inspection.
+
+These checks cover one emulator. Physical devices and TalkBack remain unverified.
+
+## Fourth interface polish — 2026-09-30
+
+All numeric inputs and unit selectors now use the shared `OutlinedTextField` floating label. The separate bold numeric labels and their configuration flags were removed. Labels use Material 3 `bodySmall`, preserving C₁, C₂, and V₂ on one line at 360 dp with 1.3× text. Inline unit controls have narrower horizontal padding while retaining their 48 dp touch targets; longer MS/MSD labels can wrap without clipping.
+
+Shared spacing values define 16 dp standard gaps, 12 dp related-field gaps, and 24 dp group/action gaps. Dilution concentrations, RPD measurements, molarity/volume, source/dilution factor, and MS/MSD measurement pairs use the related-field gap. Volume, reagent, preparation, conversion-category, conversion-pair, and amount groups use the larger separation. Preset controls use the standard gap before the first input.
+
+The tab title is **Unit conversions** in the app, previews, and UI tests. Existing selected-tab scrolling and edge fades remain in place; tests now also check the visible scroll cue. Swap uses a centered 48 dp circular tonal button, the swap-vert vector, neutral theme colors, and the description **Swap units**, with 12 dp spacing above and below.
+
+The MS/MSD note reads “All concentrations are in PPB. Changing the unit does not convert entered values.” It continues to reflect the selected unit. It sits above the form card, and its neutral icon reserves space on the first line only, allowing the second line to use the full width. Both PPB and PPM notes fit in two lines at 360 dp and 1.3× text without truncation or smaller type.
+
+Shared field supporting text, screen subtitles, preset descriptions, and preset-name validation text use `bodySmall`. Neutral helpers use `onSurfaceVariant`; validation errors retain the theme error color. Material 3's default letter spacing is unchanged. Neutral helper contrast across form, background, reference, and result surfaces is 6.62–7.56:1 in light mode and 6.94–10.62:1 in dark mode. Error supporting text on the input surface is 6.54:1 and 9.62:1 respectively. Disabled preset buttons use a neutral fill and legible neutral text, while enabled preset actions use the primary color; disabled text contrast is 6.66:1 in light mode and 8.06:1 in dark mode.
+
+The shared preview matrix now includes 360 × 640 light/dark contexts at normal and 1.3× text for every tab's empty, filled, error, and result states. Preview content follows the production field groups, labels, swap control, MS/MSD guidance, and helper text.
+
+Calculation engines, unit handling, precision, preset storage, callbacks, and tab state behavior were not changed. No result evaluation or pass/fail behavior was added.
+
+- **Build and unit tests:** `gradlew.bat assembleDebug test lint assembleDebugAndroidTest --offline --console=plain` passed; all 68 unit tests passed.
+- **Lint:** zero errors, 19 existing warnings concerning dependencies, manifest configuration, and unused resources.
+- **Android tests:** all 17 passed on BlueStacks Android 9 / API 28 at 360 × 640 and 1.3× text. The four shared UI tests also passed at normal text size. Checks cover unclipped text, single-line subscript labels, one label per field, two-line PPB/PPM notes, selected-tab bounds and scroll cues, swap dimensions/centering, IME behavior, results, and the existing preset/state workflows.
+- **Visual review:** inspected all five tabs in all four states and both themes at both font scales. Screenshot matrices, contrast calculations, and run logs are under `app/build/reports/fourth-polish/`. The effective width/font scale was recorded by Compose, rather than inferred from emulator pixels.
+- **Cleanup:** restored the emulator to 1280 × 720, density 240, and font scale 1.0. `git diff --check` passed. Existing work from earlier polish passes was preserved.

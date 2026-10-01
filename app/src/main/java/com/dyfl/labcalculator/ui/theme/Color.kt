@@ -1,13 +1,17 @@
 package com.dyfl.labcalculator.ui.theme
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val LabBlue = Color(0xFF173F91)
-val LabScreenBackground = Color(0xFFE0F8F7)
-val LabFormCard = Color(0xFFF7FFFF)
-val LabEquationCard = Color(0xFFC8F2F0)
-val LabInputBackground = Color(0xFFFFFFFF)
-val LabText = Color(0xFF111111)
-val LabMutedText = Color(0xFF4B5563)
-val LabOutline = Color(0xFF64748B)
-val LabError = Color(0xFFB3261E)
+// Semantic aliases let existing tab content inherit the active theme.
+val LabBlue: Color @Composable get() = MaterialTheme.colorScheme.primary
+val LabScreenBackground: Color @Composable get() = MaterialTheme.colorScheme.background
+val LabFormCard: Color @Composable get() = MaterialTheme.colorScheme.surface
+val LabEquationCard: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+val LabResultBackground: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
+val LabInputBackground: Color @Composable get() = MaterialTheme.colorScheme.surface
+val LabText: Color @Composable get() = MaterialTheme.colorScheme.onSurface
+val LabMutedText: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val LabOutline: Color @Composable get() = MaterialTheme.colorScheme.outline
+val LabError: Color @Composable get() = MaterialTheme.colorScheme.error

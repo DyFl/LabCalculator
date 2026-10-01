@@ -41,7 +41,8 @@ class BenchWorkflowTest {
         }
     }
 
-    private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label))
+    private fun field(label: String) = compose.onNode(
+        hasSetTextAction() and (hasText(label) or hasContentDescription(label)))
     private fun click(text: String) = compose.onNodeWithText(text).performScrollTo().performClick()
     private fun assertEmpty(label: String) = field(label).assert(
         SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
@@ -74,6 +75,7 @@ class BenchWorkflowTest {
         field("Final solution volume (V₂)").performTextInput("50")
         click("Calculate")
         click("Save preset")
+        compose.onNodeWithText("Save concentrations and final volume as a preparation recipe.").assertExists()
         field("Preset name").performTextInput("Daily standard")
         compose.onNodeWithText("Save").performClick()
         compose.waitUntil { store.load(PresetKind.DILUTION).size == 1 }

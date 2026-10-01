@@ -1,50 +1,29 @@
 package com.dyfl.labcalculator.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyfl.labcalculator.calculation.MetricUnit
 import com.dyfl.labcalculator.calculation.UnitCategory
 import com.dyfl.labcalculator.calculation.UnitConversionResult
 import com.dyfl.labcalculator.calculation.UnitConverter
 import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
+import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
+import com.dyfl.labcalculator.ui.theme.LabGroupSpacing
 import com.dyfl.labcalculator.ui.theme.LabBlue
-import com.dyfl.labcalculator.ui.theme.LabEquationCard
-import com.dyfl.labcalculator.ui.theme.LabFormCard
 import com.dyfl.labcalculator.ui.theme.LabMutedText
-import com.dyfl.labcalculator.ui.theme.LabScreenBackground
 
 @Composable
 fun UnitConversionsScreen(modifier: Modifier = Modifier) {
@@ -83,204 +62,126 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(LabScreenBackground)
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Unit Conversions",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = LabBlue
-        )
-        Text(
-            text = "Exact metric conversions by category",
-            style = MaterialTheme.typography.bodyMedium,
-            color = LabMutedText
-        )
+    LabScreen(modifier = modifier, onCalculate = ::calculate) {
+        LabScreenHeading("Unit Conversions",
+            subtitle = "Exact metric conversions by category")
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = LabFormCard),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                PresetControls(
-                    kind = PresetKind.UNIT_CONVERSION,
-                    description = "Save a starting and destination unit pair.",
-                    currentSettings = { PresetSettings.Conversion(fromUnit, toUnit) },
-                    onApply = { settings ->
-                        val conversion = settings as PresetSettings.Conversion
-                        categoryName = conversion.fromUnit.category.name
-                        fromUnitName = conversion.fromUnit.name
-                        toUnitName = conversion.toUnit.name
-                        inputValue = ""
-                        clearResult()
-                    }
-                )
-                ConversionHeading("Category")
-                Spacer(modifier = Modifier.height(6.dp))
-                LabDropdown(
-                    selected = category,
-                    options = UnitCategory.entries,
-                    buttonText = { it.displayName },
-                    onSelected = { selectedCategory ->
-                        val units = MetricUnit.forCategory(selectedCategory)
-                        categoryName = selectedCategory.name
-                        fromUnitName = units.getOrElse(1) { units.first() }.name
-                        toUnitName = units.first().name
-                        clearResult()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+        LabFormulaCard {
+            Text(
+                text = UnitConverter.explanation(fromUnit, toUnit),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = LabBlue
+            )
+            Text(
+                text = "Only units within the selected category can be converted.",
+                style = MaterialTheme.typography.bodySmall,
+                color = LabMutedText
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                ConversionHeading("Starting unit")
-                Spacer(modifier = Modifier.height(6.dp))
-                LabDropdown(
-                    selected = fromUnit,
-                    options = categoryUnits,
-                    buttonText = { "${it.displayName} (${it.symbol})" },
-                    onSelected = {
-                        fromUnitName = it.name
-                        clearResult()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                ConversionHeading("Destination unit")
-                Spacer(modifier = Modifier.height(6.dp))
-                LabDropdown(
-                    selected = toUnit,
-                    options = categoryUnits,
-                    buttonText = { "${it.displayName} (${it.symbol})" },
-                    onSelected = {
-                        toUnitName = it.name
-                        clearResult()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        val oldFromUnitName = fromUnitName
-                        fromUnitName = toUnitName
-                        toUnitName = oldFromUnitName
-                        clearResult()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("⇄  Swap starting and destination units")
+        LabInputsCard {
+            PresetControls(
+                kind = PresetKind.UNIT_CONVERSION,
+                description = "Save a starting and destination unit pair.",
+                currentSettings = { PresetSettings.Conversion(fromUnit, toUnit) },
+                onApply = { settings ->
+                    val conversion = settings as PresetSettings.Conversion
+                    categoryName = conversion.fromUnit.category.name
+                    fromUnitName = conversion.fromUnit.name
+                    toUnitName = conversion.toUnit.name
+                    inputValue = ""
+                    clearResult()
                 }
+            )
+            LabDropdown(
+                label = "Category",
+                selected = category,
+                options = UnitCategory.entries,
+                buttonText = { it.displayName },
+                onSelected = { selectedCategory ->
+                    val units = MetricUnit.forCategory(selectedCategory)
+                    categoryName = selectedCategory.name
+                    fromUnitName = units.getOrElse(1) { units.first() }.name
+                    toUnitName = units.first().name
+                    clearResult()
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = LabEquationCard)
-                ) {
-                    Text(
-                        text = UnitConverter.explanation(fromUnit, toUnit),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = LabBlue,
-                        textAlign = TextAlign.Center
-                    )
-                }
+            LabDropdown(
+                label = "Starting unit",
+                selected = fromUnit,
+                options = categoryUnits,
+                buttonText = { "${it.displayName} (${it.symbol})" },
+                onSelected = {
+                    fromUnitName = it.name
+                    clearResult()
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
+            LabSwapUnitsButton(onClick = {
+                val oldFromUnitName = fromUnitName
+                fromUnitName = toUnitName
+                toUnitName = oldFromUnitName
+                clearResult()
+            })
 
-                ConversionHeading("Value to convert")
-                Spacer(modifier = Modifier.height(6.dp))
-                LabNumberTextField(
-                    label = "Value to convert",
-                    value = inputValue,
-                    onValueChange = {
-                        inputValue = it
-                        clearResult()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    suffix = fromUnit.symbol,
-                    error = inputError,
-                    imeAction = ImeAction.Done
-                )
+            Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
+            LabDropdown(
+                label = "Destination unit",
+                selected = toUnit,
+                options = categoryUnits,
+                buttonText = { "${it.displayName} (${it.symbol})" },
+                onSelected = {
+                    toUnitName = it.name
+                    clearResult()
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = ::calculate,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
-                    ) {
-                        Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            inputValue = ""
-                            convertedValue = ""
-                            calculationStepsEncoded = ""
-                            inputError = null
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 52.dp)
-                    ) {
-                        Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+            LabNumberTextField(
+                label = "Value to convert",
+                value = inputValue,
+                onValueChange = {
+                    inputValue = it
+                    clearResult()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                suffix = fromUnit.symbol,
+                error = inputError,
+                imeAction = ImeAction.Done
+            )
 
-                if (convertedValue.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(18.dp))
-                    LabResultCard(label = "Converted result", value = "$convertedValue ${toUnit.symbol}")
-                }
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
 
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        steps = decodeCalculationSteps(calculationStepsEncoded)
-                    )
-                }
-            }
+            LabCalculateActions(onClear = {
+                inputValue = ""
+                convertedValue = ""
+                calculationStepsEncoded = ""
+                inputError = null
+            })
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Only units within the selected category can be converted.",
-            style = MaterialTheme.typography.bodySmall,
-            color = LabMutedText,
-            textAlign = TextAlign.Center
-        )
-    }
-}
+        if (convertedValue.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
+            LabResultCard(label = "Converted result", value = "$convertedValue ${toUnit.symbol}")
+        }
 
-@Composable
-private fun ConversionHeading(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold
-    )
+        if (calculationStepsEncoded.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(14.dp))
+            CalculationStepsCard(
+                steps = decodeCalculationSteps(calculationStepsEncoded)
+            )
+        }
+    }
 }

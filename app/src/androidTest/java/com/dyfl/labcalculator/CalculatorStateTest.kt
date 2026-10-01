@@ -11,8 +11,28 @@ import org.junit.Test
 class CalculatorStateTest {
     @get:Rule val compose = createComposeRule()
 
-    private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label))
+    private fun field(label: String) = compose.onNode(
+        hasSetTextAction() and (hasText(label) or hasContentDescription(label)))
     private fun click(text: String) = compose.onNodeWithText(text).performScrollTo().performClick()
+
+    @Test
+    fun formulaDetailsAreOptionalAndExpansionSurvivesRestoration() {
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { LabCalculatorTheme { LabCalculatorApp() } }
+        compose.onNodeWithText("C₁V₁ = C₂V₂").assertDoesNotExist()
+        compose.onNodeWithText("Total prepared solution volume, including the stock.").assertExists()
+        field("Stock concentration (C₁)").performTextInput("10")
+        click("Formula and assumptions")
+        compose.onNodeWithText("C₁V₁ = C₂V₂").assertExists()
+        click("RPD")
+        compose.onNodeWithText("RPD (%) = |Original − Replicate|").assertDoesNotExist()
+        click("Dilution")
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("C₁V₁ = C₂V₂").assertExists()
+        field("Stock concentration (C₁)").assertTextContains("10")
+        click("Formula and assumptions")
+        compose.onNodeWithText("C₁V₁ = C₂V₂").assertDoesNotExist()
+    }
 
     @Test
     fun resultSurvivesTabSwitchAndRestorationButClearsOnEdit() {

@@ -1,48 +1,28 @@
 package com.dyfl.labcalculator.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.dyfl.labcalculator.calculation.RpdCalculator
 import com.dyfl.labcalculator.calculation.RpdField
 import com.dyfl.labcalculator.calculation.RpdResult
+import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
+import com.dyfl.labcalculator.ui.theme.LabGroupSpacing
 import com.dyfl.labcalculator.ui.theme.LabBlue
-import com.dyfl.labcalculator.ui.theme.LabEquationCard
 import com.dyfl.labcalculator.ui.theme.LabError
-import com.dyfl.labcalculator.ui.theme.LabFormCard
 import com.dyfl.labcalculator.ui.theme.LabMutedText
-import com.dyfl.labcalculator.ui.theme.LabScreenBackground
 
 @Composable
 fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
@@ -85,155 +65,94 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(LabScreenBackground)
-            .navigationBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Relative Percent Difference",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = LabBlue
-        )
-        Text(
-            text = "Compare a sample with its replicate",
-            style = MaterialTheme.typography.bodyMedium,
-            color = LabMutedText
-        )
+    LabScreen(modifier = modifier, onCalculate = ::calculate) {
+        LabScreenHeading("Relative Percent Difference",
+            subtitle = "Use results with the same units and dilution basis.")
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = LabEquationCard)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "RPD (%) = |Original − Replicate|",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = LabBlue,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "÷ |(Original + Replicate) ÷ 2| × 100",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = LabBlue,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Both results must use the same units and dilution basis. Signed values use an absolute average; check your SOP for near-zero or non-detect results.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LabMutedText,
-                    textAlign = TextAlign.Center
-                )
-            }
+        LabFormulaCard {
+            Text(
+                text = "RPD (%) = |Original − Replicate|",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = LabBlue,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "÷ |(Original + Replicate) ÷ 2| × 100",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = LabBlue,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Both results must use the same units and dilution basis. Signed values use an absolute average; check your SOP for near-zero or non-detect results.",
+                style = MaterialTheme.typography.bodySmall,
+                color = LabMutedText,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Only the final percentage is rounded, to two decimal places.",
+                style = MaterialTheme.typography.bodySmall,
+                color = LabMutedText
+            )
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = LabFormCard),
-            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                RpdInput(
-                    label = "Original Sample Result",
-                    value = originalResult,
-                    onValueChange = {
-                        originalResult = it
-                        clearResultAndError(RpdField.ORIGINAL_SAMPLE)
-                    },
-                    error = fieldErrors[RpdField.ORIGINAL_SAMPLE]
-                )
+        LabInputsCard {
+            RpdInput(
+                label = "Original Sample Result",
+                value = originalResult,
+                onValueChange = {
+                    originalResult = it
+                    clearResultAndError(RpdField.ORIGINAL_SAMPLE)
+                },
+                error = fieldErrors[RpdField.ORIGINAL_SAMPLE]
+            )
 
-                Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
 
-                RpdInput(
-                    label = "Replicate Sample Result",
-                    value = replicateResult,
-                    onValueChange = {
-                        replicateResult = it
-                        clearResultAndError(RpdField.REPLICATE_SAMPLE)
-                    },
-                    error = fieldErrors[RpdField.REPLICATE_SAMPLE],
-                    imeAction = ImeAction.Done
-                )
+            RpdInput(
+                label = "Replicate Sample Result",
+                value = replicateResult,
+                onValueChange = {
+                    replicateResult = it
+                    clearResultAndError(RpdField.REPLICATE_SAMPLE)
+                },
+                error = fieldErrors[RpdField.REPLICATE_SAMPLE],
+                imeAction = ImeAction.Done
+            )
 
-                generalError?.let {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(it, color = LabError, style = MaterialTheme.typography.bodyMedium)
-                }
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = ::calculate,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LabBlue)
-                    ) {
-                        Text("Calculate", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            originalResult = ""
-                            replicateResult = ""
-                            relativePercentDifference = ""
-                            calculationStepsEncoded = ""
-                            generalError = null
-                            fieldErrors = emptyMap()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 52.dp)
-                    ) {
-                        Text("Clear", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (relativePercentDifference.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(18.dp))
-                    LabResultCard(label = "Relative Percent Difference", value = relativePercentDifference)
-                }
-
-                if (calculationStepsEncoded.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    CalculationStepsCard(
-                        steps = decodeCalculationSteps(calculationStepsEncoded)
-                    )
-                }
+            generalError?.let {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(it, color = LabError, style = MaterialTheme.typography.bodyMedium)
             }
+
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
+
+            LabCalculateActions(onClear = {
+                originalResult = ""
+                replicateResult = ""
+                relativePercentDifference = ""
+                calculationStepsEncoded = ""
+                generalError = null
+                fieldErrors = emptyMap()
+            })
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Only the final percentage is rounded, to two decimal places.",
-            style = MaterialTheme.typography.bodySmall,
-            color = LabMutedText,
-            textAlign = TextAlign.Center
-        )
+        if (relativePercentDifference.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(LabGroupSpacing))
+            LabResultCard(label = "Relative Percent Difference", value = relativePercentDifference)
+        }
+
+        if (calculationStepsEncoded.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(14.dp))
+            CalculationStepsCard(
+                steps = decodeCalculationSteps(calculationStepsEncoded)
+            )
+        }
     }
 }
 
@@ -245,12 +164,6 @@ private fun RpdInput(
     error: String?,
     imeAction: ImeAction = ImeAction.Next
 ) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold
-    )
-    Spacer(modifier = Modifier.height(6.dp))
     LabNumberTextField(
         label = label,
         value = value,
