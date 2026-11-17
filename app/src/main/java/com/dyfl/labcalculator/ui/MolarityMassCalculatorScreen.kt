@@ -65,40 +65,9 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LabScreen(modifier = modifier, onCalculate = ::calculate) {
-        LabScreenHeading("Molarity / Dry Chemical Mass")
-        Spacer(modifier = Modifier.height(14.dp))
-        LabFormulaCard {
-            Text(
-                text = "m = M × V × FW",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = LabBlue
-            )
-            Text(
-                text = "Mass (g) = molarity (mol/L) × volume (L) × formula weight (g/mol)",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Use the final solution volume. 1,000 mL = 1 L. Volume unit changes convert the " +
-                    "quantity exactly; blanks stay blank and invalid numbers block the change.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Use the formula weight for the actual reagent, including waters of hydration. Assumes pure reagent; no purity correction is applied.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText
-            )
-            Text(
-                text = "Mass is displayed to 5 significant figures. This does not infer measurement precision from your inputs. Results are in grams.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText
-            )
-        }
-        Spacer(modifier = Modifier.height(14.dp))
+    LabScreen(modifier = modifier, onCalculate = { calculate() }) {
+        LabScreenHeading("Molarity / mass", subtitle = "Prepare a solution from a dry reagent.")
+        Spacer(modifier = Modifier.height(20.dp))
         LabInputsCard {
             PresetControls(
                 kind = PresetKind.MOLARITY_MASS,
@@ -197,5 +166,41 @@ fun MolarityMassCalculatorScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(14.dp))
             CalculationStepsCard(steps = decodeCalculationSteps(calculationStepsEncoded))
         }
+        Spacer(modifier = Modifier.height(LabGroupSpacing))
+        MolarityEquationCard()
+    }
+}
+
+@Composable
+private fun MolarityEquationCard() {
+    LabFormulaCard {
+        Text(
+            text = "m = M × V × FW",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = LabBlue
+        )
+        Text(
+            text = "Mass (g) = molarity (mol/L) × volume (L) × formula weight (g/mol)",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Use the final solution volume. 1,000 mL = 1 L. Volume unit changes convert the " +
+                "quantity exactly; blanks stay blank and invalid numbers block the change.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Use the formula weight for the actual reagent, including waters of hydration. Assumes pure reagent; no purity correction is applied.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText
+        )
+        Text(
+            text = "Mass is displayed to 5 significant figures. This does not infer measurement precision from your inputs. Results are in grams.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText
+        )
     }
 }

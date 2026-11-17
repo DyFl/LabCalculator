@@ -84,7 +84,7 @@ class WorkflowCleanupTest {
         field(measurements[0]).assertIsFocused().assertIsDisplayed()
         val viewport = compose.onNodeWithTag("Calculator scroll").fetchSemanticsNode().boundsInRoot
         val source = field(measurements[0]).fetchSemanticsNode().boundsInRoot
-        val heading = compose.onNodeWithText("Uncorrected measurements").fetchSemanticsNode().boundsInRoot
+        val heading = compose.onNodeWithText("Measurements").fetchSemanticsNode().boundsInRoot
         assertTrue("Source field must be entirely visible after Next sample", source.top >= viewport.top - 1f &&
             source.bottom <= viewport.bottom + 1f)
         assertTrue("Measurement heading must be visible above the wrapped floating label",
@@ -389,7 +389,7 @@ class WorkflowCleanupTest {
         File(directory, "viewport.txt").writeText("Width=" +
             "${compose.onAllNodes(isRoot()).fetchSemanticsNodes().maxOf { it.size.width } / density.density}dp; " +
             "density=${density.density}; fontScale=${density.fontScale}")
-        File(directory, "$name.png").outputStream().use {
+        if (captureScreenshotsEnabled()) File(directory, "$name.png").outputStream().use {
             instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
@@ -403,7 +403,7 @@ class WorkflowCleanupTest {
             click("Clear all")
             compose.onNodeWithText("All concentrations are in PPB.", substring = true).performScrollTo()
             screenshot("preparation-$mode")
-            compose.onNodeWithText("Uncorrected measurements").performScrollTo()
+            compose.onNodeWithText("Measurements").performScrollTo()
             screenshot("measurements-$mode")
             msValues()
             click("Calculate")

@@ -27,6 +27,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,17 +54,20 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import com.dyfl.labcalculator.ui.theme.LabBlue
-import com.dyfl.labcalculator.ui.theme.LabEquationCard
 import com.dyfl.labcalculator.ui.theme.LabMutedText
 import com.dyfl.labcalculator.ui.theme.LabResultBackground
 import com.dyfl.labcalculator.ui.theme.LabText
-import com.dyfl.labcalculator.ui.theme.LabControlShape
 import com.dyfl.labcalculator.ui.theme.LabResultBottomMargin
+import com.dyfl.labcalculator.ui.theme.LabPanelShape
+import com.dyfl.labcalculator.ui.theme.LabResultContent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -105,42 +111,42 @@ internal fun decodeCalculationStepSections(
 internal fun LabFormulaCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
-) = LabExpandableCard("Formula and assumptions", modifier, content)
+) = LabExpandableCard("Formula and assumptions", modifier, content = content)
 
 /** The entire header toggles the details, including its animated chevron. */
 @Composable
 private fun LabExpandableCard(
     title: String,
     modifier: Modifier = Modifier,
+    copyText: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "Details chevron")
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = LabControlShape,
-        colors = CardDefaults.cardColors(containerColor = LabEquationCard)
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
             modifier = Modifier.fillMaxWidth().clickable(role = Role.Button,
                 onClickLabel = if (expanded) "Collapse $title" else "Expand $title") {
                 expanded = !expanded
             }.semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
-                .heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                .heightIn(min = 52.dp).padding(horizontal = 4.dp,
+                    vertical = if (copyText == null) 12.dp else 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(title, modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold, color = LabBlue)
+                fontWeight = FontWeight.Medium, color = LabMutedText)
+            if (copyText != null) LabCopyButton("calculation steps", copyText, tonal = false)
             Icon(LabIcons.Chevron, contentDescription = null,
-                modifier = Modifier.padding(start = 8.dp).rotate(rotation), tint = LabBlue)
+                modifier = Modifier.padding(start = 8.dp).rotate(rotation), tint = LabMutedText)
         }
         AnimatedVisibility(
             visible = expanded,
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            Column(modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
         }
     }
@@ -157,40 +163,54 @@ internal fun LabResultCard(
     scrollIntoView: Boolean = true,
     valueStyle: TextStyle = MaterialTheme.typography.displaySmall
 ) {
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-    val snackbar = LocalCopySnackbar.current
     Card(
         modifier = modifier.fillMaxWidth().resultScrollTarget(value, scrollIntoView)
-            .testTag("Result card: $label"),
-        shape = LabControlShape,
+            .testTag("Result card: $label").semantics { liveRegion = LiveRegionMode.Polite },
+        shape = LabPanelShape,
         colors = CardDefaults.cardColors(containerColor = LabResultBackground)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, modifier = Modifier.weight(1f),
+                Text(label, modifier = Modifier.weight(1f).semantics { heading() },
                     style = MaterialTheme.typography.labelLarge,
-                    color = LabMutedText)
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(label, value)))
-                            snackbar?.currentSnackbarData?.dismiss()
-                            snackbar?.showSnackbar("Copied")
-                        }
-                    },
-                    enabled = copyEnabled,
-                    modifier = Modifier.size(48.dp)
-                ) { Icon(LabIcons.Copy, contentDescription = "Copy $label") }
+                    color = LabResultContent)
+                LabCopyButton(label, value, enabled = copyEnabled)
             }
             SelectionContainer {
-                Text(value, style = valueStyle,
-                    fontWeight = FontWeight.Bold, color = LabBlue)
+                Text(value, style = valueStyle.copy(fontFeatureSettings = "tnum"),
+                    fontWeight = FontWeight.SemiBold, color = LabResultContent)
             }
             if (supportingText != null) {
                 Spacer(Modifier.height(8.dp))
-                Text(supportingText, style = MaterialTheme.typography.bodySmall, color = LabMutedText)
+                Text(supportingText, style = MaterialTheme.typography.bodySmall, color = LabResultContent)
             }
+        }
+    }
+}
+
+/** Shared full-size copy control; clipboard contents and feedback use the displayed text. */
+@Composable
+internal fun LabCopyButton(label: String, value: String, enabled: Boolean = true, tonal: Boolean = true) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val snackbar = LocalCopySnackbar.current
+    val copy: () -> Unit = {
+        scope.launch {
+            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(label, value)))
+            snackbar?.currentSnackbarData?.dismiss()
+            snackbar?.showSnackbar("Copied")
+        }
+    }
+    if (tonal) {
+        FilledTonalIconButton(onClick = copy, enabled = enabled, modifier = Modifier.size(48.dp),
+            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f),
+                contentColor = LabResultContent)) {
+            Icon(LabIcons.Copy, contentDescription = "Copy $label")
+        }
+    } else {
+        IconButton(onClick = copy, enabled = enabled, modifier = Modifier.size(48.dp)) {
+            Icon(LabIcons.Copy, contentDescription = "Copy $label")
         }
     }
 }
@@ -203,13 +223,15 @@ internal fun Modifier.resultScrollTarget(value: String, scrollIntoView: Boolean 
     var resultSize by remember { mutableStateOf(IntSize.Zero) }
     val ime = WindowInsets.ime
     val density = LocalDensity.current
+    val viewportHeight = LocalCalculatorViewportHeight.current
     LaunchedEffect(calculationRequest, value) {
         if (scrollIntoView && calculationRequest > 0) {
             // Wait for keyboard resizing and the new result's layout before scrolling.
             snapshotFlow { ime.getBottom(density) }.first { it == 0 }
             withFrameNanos { }
             resultRequester.bringIntoView(Rect(0f, 0f, resultSize.width.toFloat(),
-                resultSize.height + with(density) { LabResultBottomMargin.toPx() }))
+                minOf(viewportHeight.value.toFloat(),
+                    resultSize.height + with(density) { LabResultBottomMargin.toPx() })))
         }
     }
     return bringIntoViewRequester(resultRequester).onSizeChanged { resultSize = it }
@@ -223,7 +245,9 @@ internal fun CalculationStepsCard(
     sections: List<CalculationStepsSection> = emptyList()
 ) {
     if (steps.isEmpty() && sections.isEmpty()) return
-    LabExpandableCard("Calculation Steps", modifier) {
+    val copyText = if (sections.isEmpty()) numberedStepsText(steps) else
+        sections.joinToString("\n\n") { it.title + "\n" + numberedStepsText(it.steps) }
+    LabExpandableCard("Calculation Steps", modifier, copyText = copyText) {
         SelectionContainer {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 if (sections.isEmpty()) NumberedCalculationSteps(steps)
@@ -238,6 +262,9 @@ internal fun CalculationStepsCard(
         }
     }
 }
+
+private fun numberedStepsText(steps: List<String>): String =
+    steps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
 
 @Composable
 private fun NumberedCalculationSteps(steps: List<String>) {

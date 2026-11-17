@@ -7,6 +7,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.dyfl.labcalculator.ui.theme.LabCalculatorTheme
 
 private enum class CalculatorTab(val title: String) {
@@ -22,11 +24,21 @@ fun LabCalculatorApp() {
     var selectedTabName by rememberSaveable { mutableStateOf(CalculatorTab.DILUTION.name) }
     val selectedTab = CalculatorTab.valueOf(selectedTabName)
     val tabStateHolder = rememberSaveableStateHolder()
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
 
     LabAppChrome(
         titles = CalculatorTab.entries.map { it.title },
         selectedTabIndex = selectedTab.ordinal,
-        onTabSelected = { selectedTabName = CalculatorTab.entries[it].name }
+        onTabSelected = { index ->
+            val nextTabName = CalculatorTab.entries[index].name
+            // Read current state: a second tap may arrive before this composition is replaced.
+            if (nextTabName != selectedTabName) {
+                focusManager.clearFocus(force = true)
+                keyboard?.hide()
+                selectedTabName = nextTabName
+            }
+        }
     ) {
         tabStateHolder.SaveableStateProvider(selectedTab.name) {
             when (selectedTab) {

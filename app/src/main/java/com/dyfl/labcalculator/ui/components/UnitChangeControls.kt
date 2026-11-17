@@ -9,10 +9,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 internal fun UnitChangeMessage(message: String?) {
-    if (message != null) Text(message, style = MaterialTheme.typography.bodySmall,
+    if (message != null) Text(message,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error)
 }
 

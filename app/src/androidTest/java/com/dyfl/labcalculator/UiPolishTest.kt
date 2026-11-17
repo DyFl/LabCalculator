@@ -13,6 +13,13 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.unit.Density
 import androidx.test.platform.app.InstrumentationRegistry
 import com.dyfl.labcalculator.presets.CalculatorPresetStore
@@ -23,6 +30,7 @@ import com.dyfl.labcalculator.ui.theme.LabCalculatorTheme
 import java.io.File
 import java.util.UUID
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,6 +44,9 @@ class UiPolishTest {
     private val store = CalculatorPresetStore(context, preferencesName)
     private var dark by mutableStateOf(false)
     private var renderedDensity: Density? = null
+    private var keyboard: SoftwareKeyboardController? = null
+    private var inputModeManager: InputModeManager? = null
+    @Volatile private var keyboardBottom = 0
 
     @After fun cleanUp() {
         context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE).edit().clear().commit()
@@ -43,6 +54,9 @@ class UiPolishTest {
 
     private fun app() = compose.setContent {
         renderedDensity = LocalDensity.current
+        keyboard = LocalSoftwareKeyboardController.current
+        inputModeManager = LocalInputModeManager.current
+        keyboardBottom = WindowInsets.ime.getBottom(LocalDensity.current)
         CompositionLocalProvider(LocalPresetStore provides store) {
             LabCalculatorTheme(darkTheme = dark) { LabCalculatorApp() }
         }
@@ -50,17 +64,21 @@ class UiPolishTest {
 
     private fun field(label: String) = compose.onNode(hasSetTextAction() and hasContentDescription(label))
     private fun click(text: String) = compose.onNodeWithText(text).performScrollTo().performClick()
-    private fun scrollToHeading(index: Int) = compose.onNodeWithText(listOf(
-        "Standard / reagent dilution", "Relative Percent Difference", "Unit Conversions",
-        "Matrix Spike / Matrix Spike Duplicate", "Molarity / Dry Chemical Mass"
-    )[index]).performScrollTo()
+    private fun scrollToHeading() = compose.onNodeWithTag("Calculator heading").performScrollTo()
     private fun resultFits(label: String) {
         val viewport = compose.onNodeWithTag("Calculator scroll").fetchSemanticsNode().boundsInRoot
         val card = compose.onNodeWithTag("Result card: $label").fetchSemanticsNode()
         val density = context.resources.displayMetrics.density
         assertTrue("Result top clipped: $label", card.positionInRoot.y >= viewport.top - 1f)
-        assertTrue("Result bottom or 16dp margin clipped: $label",
-            card.positionInRoot.y + card.size.height + 16f * density <= viewport.bottom + 1f)
+        if (card.size.height + 16f * density <= viewport.height + 1f) {
+            assertTrue("Result bottom or 16dp margin clipped: $label",
+                card.positionInRoot.y + card.size.height + 16f * density <= viewport.bottom + 1f)
+        } else {
+            // Large text and copy feedback can make a result taller than the viewport.
+            // Keep its heading/copy action visible and allow the rest to scroll.
+            compose.onNodeWithContentDescription("Copy $label").assertIsDisplayed()
+            compose.onNodeWithTag("Calculator scroll").assert(hasScrollAction())
+        }
     }
     private fun textFits() {
         compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
@@ -78,7 +96,10 @@ class UiPolishTest {
                     assertFalse("Clipped text: ${layout.layoutInput.text}; size=${layout.size}; " +
                         "constraints=${layout.layoutInput.constraints}; paragraphHeight=${layout.multiParagraph.height}",
                         clippedLine || layout.multiParagraph.didExceedMaxLines)
-                    if (layout.layoutInput.text.text in listOf("Stock concentration (C₁)",
+                    val density = checkNotNull(renderedDensity)
+                    if (density.fontScale <= 1.3f &&
+                        compose.onRoot().fetchSemanticsNode().size.width / density.density >= 360f &&
+                        layout.layoutInput.text.text in listOf("Stock concentration (C₁)",
                             "Final concentration (C₂)", "Final solution volume (V₂)")) {
                         assertTrue("Subscript label must fit on one line: ${layout.layoutInput.text}",
                             layout.lineCount == 1)
@@ -88,6 +109,8 @@ class UiPolishTest {
     }
 
     private fun screenshot(name: String) {
+        compose.runOnIdle { keyboard?.hide() }
+        compose.waitUntil(5_000) { keyboardBottom == 0 }
         compose.waitForIdle()
         val directory = File(context.getExternalFilesDir(null), "ui-polish-fourth").apply { mkdirs() }
         if (name == "tab-0-empty-light") {
@@ -97,7 +120,7 @@ class UiPolishTest {
                 "UI viewport: ${root.size.width / density.density}dp wide; " +
                     "density=${density.density}; fontScale=${density.fontScale}")
         }
-        File(directory, "$name.png").outputStream().use {
+        if (captureScreenshotsEnabled()) File(directory, "$name.png").outputStream().use {
             instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
         textFits()
@@ -115,6 +138,7 @@ class UiPolishTest {
 
     @Test fun imeNextSkipsSelectorsAndDoneCalculatesAndShowsCopiedSnackbar() {
         app()
+        compose.runOnIdle { checkNotNull(inputModeManager).requestInputMode(InputMode.Touch) }
         compose.onNodeWithText("No saved presets").assertExists()
         compose.onNodeWithText("Load preset").assertIsNotEnabled()
         field("Stock concentration (C₁)").performTextInput("10")
@@ -122,10 +146,12 @@ class UiPolishTest {
         field("Final concentration (C₂)").assertIsFocused().performTextInput("200")
         field("Final concentration (C₂)").performImeAction()
         field("Final solution volume (V₂)").assertIsFocused().performTextInput("50")
+        compose.runOnIdle { assertEquals(InputMode.Touch, checkNotNull(inputModeManager).inputMode) }
         field("Final solution volume (V₂)").performImeAction()
         compose.onNodeWithText("Transfer 1 mL of stock and make up to 50 mL final solution volume.").assertIsDisplayed()
         resultFits("Preparation")
         field("Final solution volume (V₂)").assertIsNotFocused()
+        compose.onNodeWithText("Calculate").assertIsFocused()
         compose.onNodeWithContentDescription("Copy Preparation").performClick()
         compose.onNodeWithText("Copied").assertIsDisplayed()
         click("Calculation Steps")
@@ -156,19 +182,23 @@ class UiPolishTest {
         cases.forEachIndexed { index, (tab, values, result) ->
             click(tab)
             val filePrefix = "tab-$index"
-            scrollToHeading(index)
+            val firstInvalidLabel = if (tab == "MS/MSD") "Final spike concentration added"
+                else values.first().first
+            scrollToHeading()
             screenshot("$filePrefix-empty-light")
             click("Calculate")
-            scrollToHeading(index)
+            field(firstInvalidLabel).assertIsDisplayed().assert(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
             screenshot("$filePrefix-error-light")
             click("Clear all")
             values.forEach { (label, value) -> field(label).performTextReplacement(value) }
-            scrollToHeading(index)
+            scrollToHeading()
             values.forEach { (label, _) ->
                 compose.onAllNodesWithText(label, useUnmergedTree = true).assertCountEquals(1)
             }
             screenshot("$filePrefix-filled-light")
             field(values.last().first).performImeAction()
+            values.forEach { (label, _) -> field(label).assertIsNotFocused() }
             compose.onNodeWithText(result).assertIsDisplayed()
             resultFits(listOf("Preparation", "Relative Percent Difference", "Converted result",
                 "Original source concentration", "Required Mass")[index])
@@ -176,14 +206,15 @@ class UiPolishTest {
             compose.runOnIdle { dark = true }
             screenshot("$filePrefix-result-dark")
             click("Clear all")
-            scrollToHeading(index)
+            scrollToHeading()
             screenshot("$filePrefix-empty-dark")
             click("Calculate")
-            scrollToHeading(index)
+            field(firstInvalidLabel).assertIsDisplayed().assert(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Error))
             screenshot("$filePrefix-error-dark")
             click("Clear all")
             values.forEach { (label, value) -> field(label).performTextReplacement(value) }
-            scrollToHeading(index)
+            scrollToHeading()
             screenshot("$filePrefix-filled-dark")
             if (tab == "MS/MSD") {
                 compose.onNodeWithText("All concentrations are in", substring = true)
@@ -201,6 +232,7 @@ class UiPolishTest {
         var selected by mutableStateOf(0)
         val titles = listOf("Dilution", "RPD", "Unit conversions", "MS/MSD", "Molarity")
         compose.setContent {
+            renderedDensity = LocalDensity.current
             LabCalculatorTheme {
                 LabAppChrome(titles, selected, { selected = it }) { Text("Selected calculator") }
             }

@@ -77,7 +77,7 @@ class DilutionPresetUiTest {
         File(directory, "viewport.txt").writeText(
             "UI viewport: ${compose.onAllNodes(isRoot()).fetchSemanticsNodes().maxOf { it.size.width } / density.density}dp wide; " +
                 "density=${density.density}; fontScale=${density.fontScale}")
-        File(directory, "$name.png").outputStream().use {
+        if (captureScreenshotsEnabled()) File(directory, "$name.png").outputStream().use {
             instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }

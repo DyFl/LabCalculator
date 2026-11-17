@@ -21,6 +21,9 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dyfl.labcalculator.calculation.ConcentrationUnit
@@ -36,6 +39,7 @@ import com.dyfl.labcalculator.presets.PresetKind
 import com.dyfl.labcalculator.presets.PresetSettings
 import com.dyfl.labcalculator.ui.theme.LabFieldSpacing
 import com.dyfl.labcalculator.ui.theme.LabRelatedFieldSpacing
+import com.dyfl.labcalculator.ui.theme.LabSectionHeadingSpacing
 import com.dyfl.labcalculator.ui.theme.LabGroupSpacing
 import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabCalculatorTheme
@@ -182,13 +186,11 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LabScreen(modifier = modifier, onCalculate = ::calculate) {
-        LabScreenHeading("Matrix Spike / Matrix Spike Duplicate",
-            subtitle = "MS/MSD recovery and literal-result RPD")
+    LabScreen(modifier = modifier, onCalculate = { calculate() }) {
+        LabScreenHeading("MS / MSD",
+            subtitle = "Spike recovery and measurement RPD")
 
-        Spacer(modifier = Modifier.height(14.dp))
-        MsMsdEquationCard(concentrationUnit)
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         LabInfoRow("All concentrations are in ${concentrationUnit.label}.")
         LabInfoRow(MS_MSD_BASIS_GUIDANCE)
@@ -210,7 +212,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                     fieldErrors = emptyMap()
                 }
             )
-            Text("Preparation settings", style = MaterialTheme.typography.titleSmall,
+            Text("Preparation settings", modifier = Modifier.padding(bottom = LabSectionHeadingSpacing).semantics { heading() },
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold)
             LabDropdown(
                 label = "Shared concentration unit",
@@ -252,7 +255,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(LabGroupSpacing))
             // Include the heading so a wrapped floating label cannot sit under the tab bar.
             Column(Modifier.bringIntoViewRequester(sourceRequester)) {
-                Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall,
+                Text("Measurements", modifier = Modifier.padding(bottom = LabSectionHeadingSpacing).semantics { heading() },
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold)
                 MsMsdInputField(
                     label = "Raw diluted source-sample result",
@@ -314,6 +318,8 @@ fun MsMsdCalculatorScreen(modifier: Modifier = Modifier) {
                 sections = decodeCalculationStepSections(calculationSectionsEncoded)
             )
         }
+        Spacer(modifier = Modifier.height(LabGroupSpacing))
+        MsMsdEquationCard(concentrationUnit)
     }
 }
 

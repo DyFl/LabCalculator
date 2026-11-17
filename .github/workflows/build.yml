@@ -3,6 +3,12 @@ name: Build
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      upload_apk:
+        description: Upload debug APKs as workflow artifacts
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,6 +47,7 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Upload debug APK
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_apk }}
         uses: actions/upload-artifact@v6
         with:
           name: lab-calculator-debug-apk-${{ runner.os }}

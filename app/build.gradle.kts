@@ -25,6 +25,28 @@ android {
                 enable = false
             }
         }
+        create("performance") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".performance"
+            versionNameSuffix = "-performance"
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            optimization {
+                enable = true
+            }
+            matchingFallbacks += listOf("release")
+        }
+        // Same app ID: install only over an app signed with this local debug certificate.
+        create("optimizedLocal") {
+            initWith(getByName("release"))
+            versionNameSuffix = "-optimized-local"
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            optimization {
+                enable = true
+            }
+            matchingFallbacks += listOf("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

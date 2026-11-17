@@ -121,14 +121,9 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LabScreen(modifier = modifier, onCalculate = ::calculate) {
-        LabScreenHeading("Standard / reagent dilution")
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        EquationCard()
-
-        Spacer(modifier = Modifier.height(14.dp))
+    LabScreen(modifier = modifier, onCalculate = { calculate() }) {
+        LabScreenHeading("Prepare a dilution", subtitle = "Calculate the stock volume to transfer.")
+        Spacer(modifier = Modifier.height(20.dp))
 
         LabInputsCard {
             PresetControls(
@@ -151,8 +146,8 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
                     pendingUnitName = null
                 }
             )
-            LabInfoRow("Concentration family: ${stockUnit.family.label}. " +
-                "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
+            LabInfoRow("Stock and target need the same concentration basis. " +
+                "PPM/PPB are separate from mg/L/µg/L.")
             UnitChangeMessage(unitChangeMessage)
             Spacer(modifier = Modifier.height(LabRelatedFieldSpacing))
             LabConcentrationInput(
@@ -226,6 +221,8 @@ fun DilutionCalculatorScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(14.dp))
             CalculationStepsCard(steps = result.calculationSteps)
         }
+        Spacer(modifier = Modifier.height(LabGroupSpacing))
+        EquationCard()
     }
 }
 

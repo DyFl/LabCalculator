@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,8 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,18 +37,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -54,27 +65,29 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dyfl.labcalculator.calculation.ConcentrationUnit
 import com.dyfl.labcalculator.calculation.MAX_NUMBER_INPUT_LENGTH
-import com.dyfl.labcalculator.ui.theme.LabBlue
 import com.dyfl.labcalculator.ui.theme.LabControlShape
 import com.dyfl.labcalculator.ui.theme.LabError
 import com.dyfl.labcalculator.ui.theme.LabInputBackground
 import com.dyfl.labcalculator.ui.theme.LabMutedText
 import com.dyfl.labcalculator.ui.theme.LabText
 import com.dyfl.labcalculator.ui.theme.LabTouchTarget
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.runtime.snapshotFlow
 
 private const val REJECTED_NUMBER_INPUT = "Input too long"
 
 @Composable
 internal fun LabScreenHeading(title: String, subtitle: String? = null) {
-    Text(title, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold, color = LabBlue)
+    Text(title, modifier = Modifier.fillMaxWidth().testTag("Calculator heading").semantics { heading() },
+        style = MaterialTheme.typography.headlineSmall, color = LabText)
     if (subtitle != null) {
-        Text(subtitle, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+        Text(subtitle, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+            style = MaterialTheme.typography.bodyMedium,
             color = LabMutedText)
     }
 }
 
-/** All input types share one outline and a full-width supporting-text slot. */
+/** Filled fields use a single indicator for focus/errors and a full-width supporting-text slot. */
 @Composable
 internal fun UnitField(
     value: String,
@@ -93,11 +106,11 @@ internal fun UnitField(
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
     Column(modifier) {
-        OutlinedTextField(
+        TextField(
             value = value,
             onValueChange = onValueChange,
             modifier = fieldModifier.fillMaxWidth().semantics { contentDescription = label },
-            // Let long labels wrap and the outline grow at larger font scales.
+            // Labels and their containers grow instead of truncating at large text sizes.
             label = { Text(label, style = MaterialTheme.typography.bodySmall) },
             placeholder = placeholder?.let { text -> { Text(text) } },
             trailingIcon = unitControl ?: unit?.let { suffix ->
@@ -118,11 +131,14 @@ internal fun UnitField(
             },
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
-            colors = OutlinedTextFieldDefaults.colors(
+            colors = TextFieldDefaults.colors(
                 focusedContainerColor = LabInputBackground,
                 unfocusedContainerColor = LabInputBackground,
                 disabledContainerColor = LabInputBackground,
-                errorContainerColor = LabInputBackground
+                errorContainerColor = LabInputBackground,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                errorIndicatorColor = LabError
             )
         )
     }
@@ -153,16 +169,44 @@ internal fun LabNumberTextField(
     val displayedError = if (value == REJECTED_NUMBER_INPUT) {
         "Input was not accepted. Use at most $MAX_NUMBER_INPUT_LENGTH characters."
     } else error
+    val currentError = rememberUpdatedState(displayedError)
+    val fieldRequester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val fieldSize = remember { mutableStateOf(IntSize.Zero) }
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val viewportHeight = LocalCalculatorViewportHeight.current
+    LaunchedEffect(focused, ime, density, viewportHeight) {
+        if (focused) {
+            // Observe layout in the focused field's coroutine, without recomposing all fields
+            // or restarting their effects on every frame of a keyboard animation.
+            snapshotFlow { Triple(ime.getBottom(density), viewportHeight.value, fieldSize.value) }
+                .collectLatest {
+                    withFrameNanos { }
+                    fieldRequester.bringIntoView()
+                }
+        }
+    }
+    val validationTargets = LocalValidationTargets.current
+    DisposableEffect(validationTargets, readOnly) {
+        val target = LabValidationTarget(fieldRequester) { currentError.value != null }
+        if (!readOnly) validationTargets?.add(target)
+        onDispose { validationTargets?.remove(target) }
+    }
     UnitField(
         value = value,
         onValueChange = { proposed ->
             // Preserve the existing whole-edit rejection; never truncate a number.
             onValueChange(if (proposed.length > MAX_NUMBER_INPUT_LENGTH) REJECTED_NUMBER_INPUT else proposed)
         },
-        label = label, modifier = modifier, unit = suffix, unitControl = unitControl,
+        label = label, modifier = modifier.bringIntoViewRequester(fieldRequester)
+            .onSizeChanged { fieldSize.value = it },
+        unit = suffix, unitControl = unitControl,
         placeholder = placeholder, error = displayedError,
         supportingText = supportingText, readOnly = readOnly,
-        fieldModifier = Modifier.focusRequester(focusRequester),
+        fieldModifier = Modifier.focusRequester(focusRequester).onFocusChanged {
+            focused = it.isFocused
+        },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = imeAction),
         keyboardActions = KeyboardActions(
             onNext = {
@@ -221,7 +265,7 @@ internal fun <T> LabNumberWithUnit(
         })
 }
 
-/** Read-only selectors use the same field outline, with a floating label. */
+/** Read-only selectors use the same tonal surface and floating label. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun <T> LabDropdown(

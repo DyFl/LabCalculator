@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.dyfl.labcalculator.calculation.RpdCalculator
 import com.dyfl.labcalculator.calculation.RpdField
 import com.dyfl.labcalculator.calculation.RpdResult
@@ -65,42 +68,11 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LabScreen(modifier = modifier, onCalculate = ::calculate) {
-        LabScreenHeading("Relative Percent Difference",
+    LabScreen(modifier = modifier, onCalculate = { calculate() }) {
+        LabScreenHeading("Relative percent difference",
             subtitle = "Use results with the same units and dilution basis.")
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        LabFormulaCard {
-            Text(
-                text = "RPD (%) = |Original − Replicate|",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = LabBlue,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "÷ |(Original + Replicate) ÷ 2| × 100",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = LabBlue,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Both results must use the same units and dilution basis. Signed values use an absolute average; check your SOP for near-zero or non-detect results.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Only the final percentage is rounded, to two decimal places.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
+        Spacer(modifier = Modifier.height(20.dp))
         LabInputsCard {
             RpdInput(
                 label = "Original Sample Result",
@@ -127,7 +99,8 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
 
             generalError?.let {
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(it, color = LabError, style = MaterialTheme.typography.bodyMedium)
+                Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    color = LabError, style = MaterialTheme.typography.bodyMedium)
             }
 
             Spacer(modifier = Modifier.height(LabGroupSpacing))
@@ -153,6 +126,8 @@ fun RpdCalculatorScreen(modifier: Modifier = Modifier) {
                 steps = decodeCalculationSteps(calculationStepsEncoded)
             )
         }
+        Spacer(modifier = Modifier.height(LabGroupSpacing))
+        RpdEquationCard()
     }
 }
 
@@ -172,4 +147,35 @@ private fun RpdInput(
         error = error,
         imeAction = imeAction
     )
+}
+
+@Composable
+private fun RpdEquationCard() {
+    LabFormulaCard {
+        Text(
+            text = "RPD (%) = |Original − Replicate|",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = LabBlue,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "÷ |(Original + Replicate) ÷ 2| × 100",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = LabBlue,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Both results must use the same units and dilution basis. Signed values use an absolute average; check your SOP for near-zero or non-detect results.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Only the final percentage is rounded, to two decimal places.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText
+        )
+    }
 }

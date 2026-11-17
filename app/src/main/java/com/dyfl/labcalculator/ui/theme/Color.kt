@@ -8,9 +8,10 @@ import androidx.compose.ui.graphics.Color
 val LabBlue: Color @Composable get() = MaterialTheme.colorScheme.primary
 val LabScreenBackground: Color @Composable get() = MaterialTheme.colorScheme.background
 val LabFormCard: Color @Composable get() = MaterialTheme.colorScheme.surface
-val LabEquationCard: Color @Composable get() = MaterialTheme.colorScheme.surfaceVariant
-val LabResultBackground: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
-val LabInputBackground: Color @Composable get() = MaterialTheme.colorScheme.surface
+val LabEquationCard: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerLow
+val LabResultBackground: Color @Composable get() = MaterialTheme.colorScheme.secondaryContainer
+val LabResultContent: Color @Composable get() = MaterialTheme.colorScheme.onSecondaryContainer
+val LabInputBackground: Color @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
 val LabText: Color @Composable get() = MaterialTheme.colorScheme.onSurface
 val LabMutedText: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val LabOutline: Color @Composable get() = MaterialTheme.colorScheme.outline

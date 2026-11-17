@@ -4,9 +4,9 @@ I work in an environmental laboratory and built this Android app for calculation
 
 It works offline, with no account, analytics, or internet permission. Android 7.0 or newer is required.
 
-<img src="docs/screenshots/dilution-calculator-current.png" alt="Dilution calculator with floating subscript labels and filled preparation settings" width="360">
+<img src="docs/screenshots/instrument/dilution-light.png" alt="Dilution calculator with filled inputs and quiet preset actions" width="360">
 
-*Current development UI running in BlueStacks at 360 × 640, September 30, 2026. Forms scroll to reveal the remaining controls and results.*
+*Current development UI on BlueStacks Android 9, November 14, 2026, at 360 dp width and default text size. Forms scroll to reveal the remaining controls and results. See [the redesign review](docs/instrument-design.md) for themes, results, and small-screen checks.*
 
 ## What it does
 
@@ -16,7 +16,7 @@ It works offline, with no account, analytics, or internet permission. Android 7.
 - **MS/MSD:** source concentration, spike recoveries, and RPD of the measured MS/MSD results, with one shared PPM, PPB, mg/L or µg/L setting.
 - **Molarity / mass:** grams of reagent from molarity, final volume, and formula weight.
 
-Each calculator displays its result in a card with a copy icon that includes the units in the copied value. **Formula and assumptions** expands the reference notes, while essential input guidance stays beside the fields. Calculation steps can be expanded, selected, and copied. Editing an input clears its previous result. Tabs retain separate inputs during navigation and Android state restoration; this isn't a permanent calculation log. The app follows the system's light or dark theme.
+Each calculator displays its result in a card with a copy icon that includes the units in the copied value. **Formula and assumptions** expands the reference notes below the main workflow, while essential input guidance stays beside the fields. Calculation steps can be expanded, selected, or copied together with their own copy button. Editing an input clears its previous result. Selected tabs use a filled pill; **All calculators** in the app bar also lists every tool. Tabs retain separate inputs during navigation and Android state restoration; this isn't a permanent calculation log. The app follows the system's light or dark theme.
 
 Named presets are saved on the device for dilution recipes, molarity/reagent recipes, MS/MSD preparation settings, and unit-conversion pairs. Use **Save preset** after entering valid settings, then **Load preset** to reuse them. MS/MSD presets contain units, dilution factor, and added spike concentration; loading one clears sample measurements, results, and obsolete errors. **Next sample** clears measurements, results, and measurement errors while keeping preparation settings and their validation errors, then focuses and scrolls to the source measurement. **Clear all** resets the whole MS/MSD form and clears all errors. Presets can be deleted from the load dialog; names must be unique within each calculator, with up to 20 presets each. Presets survive app restarts, but are removed when app data is cleared or the app is uninstalled. No sample results or calculation history are stored in presets.
 
@@ -24,15 +24,13 @@ Preset status distinguishes empty storage from records this app cannot load and 
 
 ## Latest UI changes
 
-The October 1 workflow cleanup groups the four MS/MSD results in one compact, wrapping summary with individual copy actions. Essential preparation assumptions stay visible; detailed unit-change mechanics are in **Formula and assumptions**. Empty concentration-family and converter-category changes skip the reset dialog; populated or invalid text still requires confirmation. See [workflow cleanup and verification](docs/workflow-cleanup.md).
+The November 14 redesign uses a calm blue palette, filled inputs, distinct shapes for forms and actions, and teal result surfaces in light and dark themes. Presets remain one tap away as quieter text actions. Calculate scrolls to the result or the first invalid field, and changing calculator dismisses the keyboard. MS/MSD keeps separate preparation and measurement sections and four individually copyable results. See [the design decisions, current screenshots, and verification](docs/instrument-design.md).
 
-The separate October 1 concentration-units pass adds mg/L and µg/L, exact quantity-preserving unit changes, and an explicit reset/re-entry flow between incompatible families. MS/MSD uses one shared selector in preparation settings, with static units beside all four concentration inputs. Its supported preparation basis stays visible: post-dilution spike, uncorrected measurements on the same basis, and negligible spike volume. See [concentration unit rules and verification](docs/concentration-units.md). The earlier dilution instruction and preset-status improvements remain in place. No release version or signing changes were made.
+Scientific calculations, display policies, exact unit changes, saved presets, and state restoration are retained. The [concentration-unit rules](docs/concentration-units.md), [dilution display policy](docs/dilution-presets.md), and [MS/MSD workflow notes](docs/workflow-cleanup.md) remain applicable. No QC limits, runtime dependencies, permissions, or accounts were added. Test-only AndroidX dependencies were updated for Android 17 compatibility.
 
-The October 1 development update adds preparation instructions with µL/mL stock transfers and accurate preset-storage status. Dilution results retain exact rational quantities and exact working. See [dilution and preset change notes](docs/dilution-presets.md) for the display policy and current verification. The published APK below predates these source changes.
+A local responsiveness follow-up fixes rapid return taps, reduces form recomposition during keyboard resizing and input updates, and adds isolated and in-place optimized test builds. Pixel measurements, signing checks, and remaining tab-rendering/test-harness limits are in the [responsiveness report](docs/responsiveness.md).
 
-The September 30 development update gives all five tabs shared floating labels, consistent field groups, light/dark colors, and readable supporting text. Unit conversions retains its full tab name, visible scroll cues, and a centered circular **Swap units** control. MS/MSD has a shorter two-line unit reminder, and disabled preset actions remain legible. Calculations, unit handling, precision, and preset storage are unchanged; no pass/fail evaluation was added.
-
-Build, all 68 unit tests, and lint passed; all 17 Android tests passed at 360 × 640 with 1.3× text. Lint has zero errors and 19 existing warnings. See [UI change notes and screenshots](docs/ui-polish.md) for the full changes and verification. These changes are in the source; the published APK linked below predates this UI update.
+The published APK linked below predates these source changes. This preview contains source, tests, screenshots, and performance findings; no new APK or release is published. See the responsiveness report for local builds and signing requirements. Push and pull-request CI runs test/build the app; uploading an APK artifact requires an explicit manual workflow opt-in.
 
 ## Calculation assumptions
 

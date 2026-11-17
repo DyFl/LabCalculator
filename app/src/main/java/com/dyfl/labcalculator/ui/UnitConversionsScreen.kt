@@ -100,31 +100,11 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LabScreen(modifier = modifier, onCalculate = ::calculate) {
-        LabScreenHeading("Unit Conversions",
+    LabScreen(modifier = modifier, onCalculate = { calculate() }) {
+        LabScreenHeading("Convert units",
             subtitle = "Exact metric conversions by category")
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        LabFormulaCard {
-            Text(
-                text = UnitConverter.explanation(fromUnit, toUnit),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = LabBlue
-            )
-            Text(
-                text = "Only units within the selected category can be converted. Mass-per-volume units do not imply a parts-per basis or density.",
-                style = MaterialTheme.typography.bodySmall,
-                color = LabMutedText
-            )
-            Text("Starting unit changes and Swap units convert the quantity exactly. Blank input stays blank; " +
-                "invalid input blocks the change. Destination changes select only the output unit. " +
-                "Category changes clear the input for re-entry, with confirmation when it is populated.",
-                style = MaterialTheme.typography.bodySmall, color = LabMutedText)
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-
+        Spacer(modifier = Modifier.height(20.dp))
         LabInputsCard {
             PresetControls(
                 kind = PresetKind.UNIT_CONVERSION,
@@ -223,5 +203,28 @@ fun UnitConversionsScreen(modifier: Modifier = Modifier) {
                 steps = decodeCalculationSteps(calculationStepsEncoded)
             )
         }
+        Spacer(modifier = Modifier.height(LabGroupSpacing))
+        UnitConversionEquationCard(fromUnit, toUnit)
+    }
+}
+
+@Composable
+private fun UnitConversionEquationCard(fromUnit: MetricUnit, toUnit: MetricUnit) {
+    LabFormulaCard {
+        Text(
+            text = UnitConverter.explanation(fromUnit, toUnit),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = LabBlue
+        )
+        Text(
+            text = "Only units within the selected category can be converted. Mass-per-volume units do not imply a parts-per basis or density.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LabMutedText
+        )
+        Text("Starting unit changes and Swap units convert the quantity exactly. Blank input stays blank; " +
+            "invalid input blocks the change. Destination changes select only the output unit. " +
+            "Category changes clear the input for re-entry, with confirmation when it is populated.",
+            style = MaterialTheme.typography.bodySmall, color = LabMutedText)
     }
 }

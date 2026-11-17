@@ -80,7 +80,7 @@ class ConcentrationUnitsUiTest {
         val density = checkNotNull(renderedDensity)
         File(directory, "viewport.txt").writeText("Width=" +
             "${compose.onAllNodes(isRoot()).fetchSemanticsNodes().maxOf { it.size.width } / density.density}dp; fontScale=${density.fontScale}")
-        File(directory, "$name.png").outputStream().use {
+        if (captureScreenshotsEnabled()) File(directory, "$name.png").outputStream().use {
             instrumentation.uiAutomation.takeScreenshot().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }

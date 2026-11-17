@@ -7,10 +7,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
@@ -21,10 +27,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -33,7 +43,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import com.dyfl.labcalculator.ui.theme.LabTabHorizontalPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,20 +55,42 @@ internal fun LabAppChrome(
     onTabSelected: (Int) -> Unit,
     content: @Composable () -> Unit
 ) {
+    var showCalculators by remember { mutableStateOf(false) }
     val tabsScroll = rememberScrollState()
     val tabRequesters = remember(titles.size) { List(titles.size) { BringIntoViewRequester() } }
     LaunchedEffect(selectedTabIndex) {
         withFrameNanos { }
         tabRequesters[selectedTabIndex].bringIntoView()
     }
-    val tabColor = MaterialTheme.colorScheme.surface
+    val tabColor = MaterialTheme.colorScheme.background
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column {
             TopAppBar(
                 title = {
-                    Text("Lab Calculator", style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
+                    Text("Lab Calculator", style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold)
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showCalculators = true }) {
+                            Icon(LabIcons.Grid, contentDescription = "All calculators")
+                        }
+                        DropdownMenu(expanded = showCalculators,
+                            onDismissRequest = { showCalculators = false }) {
+                            titles.forEachIndexed { index, title ->
+                                DropdownMenuItem(
+                                    text = { Text(title, fontWeight = if (index == selectedTabIndex)
+                                        FontWeight.Bold else FontWeight.Normal) },
+                                    modifier = Modifier.semantics { selected = index == selectedTabIndex },
+                                    onClick = {
+                                        onTabSelected(index)
+                                        showCalculators = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 },
                 expandedHeight = maxOf(48.dp, 48.dp * LocalDensity.current.fontScale),
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -71,12 +104,17 @@ internal fun LabAppChrome(
                     scrollState = tabsScroll,
                     containerColor = tabColor,
                     contentColor = MaterialTheme.colorScheme.primary,
-                    edgePadding = 8.dp,
-                    minTabWidth = 96.dp
+                    edgePadding = 12.dp,
+                    minTabWidth = 64.dp,
+                    indicator = {},
+                    divider = {}
                 ) {
                     titles.forEachIndexed { index, title ->
                         Tab(
-                            modifier = Modifier.bringIntoViewRequester(tabRequesters[index]).testTag("Tab: $title"),
+                            modifier = Modifier.bringIntoViewRequester(tabRequesters[index])
+                                .testTag("Tab: $title").padding(horizontal = 2.dp, vertical = 4.dp)
+                                .clip(CircleShape).background(if (selectedTabIndex == index)
+                                    MaterialTheme.colorScheme.primaryContainer else Color.Transparent),
                             selected = selectedTabIndex == index,
                             onClick = { onTabSelected(index) },
                             selectedContentColor = MaterialTheme.colorScheme.primary,

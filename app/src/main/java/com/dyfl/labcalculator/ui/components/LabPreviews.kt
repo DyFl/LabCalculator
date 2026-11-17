@@ -33,15 +33,19 @@ import com.dyfl.labcalculator.ui.theme.LabGroupSpacing
     showBackground = true, fontScale = 1.3f)
 @Preview(name = "Dark · 360 × 640 · 1.3×", widthDp = 360, heightDp = 640,
     showBackground = true, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(name = "Light · 320 × 640 · 1.5×", widthDp = 320, heightDp = 640,
+    showBackground = true, fontScale = 1.5f)
+@Preview(name = "Dark · 320 × 640 · 1.5×", widthDp = 320, heightDp = 640,
+    showBackground = true, fontScale = 1.5f, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private annotation class LabSmallScreenPreviews
 
 internal enum class LabPreviewState { EMPTY, FILLED, ERROR, RESULT }
 internal enum class LabPreviewTab(val title: String, val heading: String) {
-    DILUTION("Dilution", "Standard / reagent dilution"),
-    RPD("RPD", "Relative Percent Difference"),
-    CONVERT("Unit conversions", "Unit Conversions"),
-    MS_MSD("MS/MSD", "Matrix Spike / Matrix Spike Duplicate"),
-    MOLARITY("Molarity", "Molarity / Dry Chemical Mass")
+    DILUTION("Dilution", "Prepare a dilution"),
+    RPD("RPD", "Relative percent difference"),
+    CONVERT("Unit conversions", "Convert units"),
+    MS_MSD("MS/MSD", "MS / MSD"),
+    MOLARITY("Molarity", "Molarity / mass")
 }
 
 internal data class LabPreviewCase(val tab: LabPreviewTab, val state: LabPreviewState)
@@ -63,9 +67,7 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
     LabAppChrome(LabPreviewTab.entries.map { it.title }, tab.ordinal, {}) {
         LabScreen(onCalculate = {}, scrollState = rememberScrollState()) {
             LabScreenHeading(tab.heading)
-            Spacer(Modifier.height(14.dp))
-            LabFormulaCard { Text("Formula and input assumptions") }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(20.dp))
             if (tab == LabPreviewTab.MS_MSD) {
                 LabInfoRow("All concentrations are in PPB.")
                 LabInfoRow(MS_MSD_BASIS_GUIDANCE)
@@ -75,8 +77,8 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                 Column {
                     when (tab) {
                         LabPreviewTab.DILUTION -> {
-                            LabInfoRow("Concentration family: Parts per: matching ratio basis. " +
-                                "Stock and target must share the same basis. PPM/PPB are not treated as mg/L/µg/L.")
+                            LabInfoRow("Stock and target need the same concentration basis. " +
+                                "PPM/PPB are separate from mg/L/µg/L.")
                             Spacer(Modifier.height(LabRelatedFieldSpacing))
                             LabConcentrationInput("Stock concentration (C₁)", if (filled) "10" else "", {},
                                 ConcentrationUnit.PPM, {},
@@ -127,7 +129,7 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                             LabNumberTextField(if (filled) "50" else "", {}, label = "Final spike concentration added", suffix = "PPB",
                                 supportingText = "Added to each diluted aliquot after dilution.")
                             Spacer(Modifier.height(LabGroupSpacing))
-                            Text("Uncorrected measurements", style = MaterialTheme.typography.titleSmall)
+                            Text("Measurements", style = MaterialTheme.typography.titleSmall)
                             LabNumberTextField(if (filled) "5" else "", {}, label = "Raw diluted source-sample result", suffix = "PPB",
                                 error = if (error) "Enter the raw source result." else null,
                                 supportingText = "Before applying the dilution factor.")
@@ -172,6 +174,8 @@ internal fun LabComponentPreview(state: LabPreviewState, tab: LabPreviewTab = La
                 Spacer(Modifier.height(14.dp))
                 CalculationStepsCard(steps = listOf("Substitute the entered values.", "Calculated result with units."))
             }
+            Spacer(Modifier.height(LabGroupSpacing))
+            LabFormulaCard { Text("Formula and input assumptions") }
         }
     }
 }
