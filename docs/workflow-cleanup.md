@@ -1,5 +1,7 @@
 # Focused workflow cleanup — October 1, 2026
 
+> Historical record for the work committed as `83bd243`, the reviewed main source. Its 100/48 test result is separate from the newer November branch. “Nothing was pushed or published” below describes the original local session, not the present visibility of this commit. See [release and verification status](verification.md).
+
 The completed dilution-output, preset-status and concentration-unit passes were reviewed and checkpointed locally as `1dc95b0`. The checkpoint contains their source, tests and documentation; attachments, generated reports/build outputs and signing material are excluded.
 
 ## Changes
