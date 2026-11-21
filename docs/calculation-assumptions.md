@@ -2,7 +2,7 @@
 
 These rules describe `main` at `83bd243` and are retained by the November source preview at `71b4733`. The published `v1.0.2-preview.1` APK predates the later unit-change and dilution-display work; see [release and verification status](verification.md).
 
-Check results against the applicable approved SOP, analytical method, and laboratory QA system. Lab Calculator is a personal calculation aid, not an EPA-approved method or a validated laboratory information system. Automated tests do not establish suitability for a particular method.
+Check results against the applicable approved SOP, analytical method, and laboratory QA system. Automated tests do not establish suitability for every method. Validate the app for your intended use and laboratory procedures.
 
 Dilution uses the **final solution volume**, not the volume of solvent added. Results say “Transfer X µL/mL of stock and make up to Y mL final solution volume.” Stock and target must use the same concentration family and underlying basis. The app converts exactly within either **PPM/PPB** (1 PPM = 1,000 PPB on the same parts-per basis) or **mg/L/µg/L** (1 mg/L = 1,000 µg/L). It never equates PPM with mg/L or PPB with µg/L and does not infer density or which parts-per ratio basis your method uses. Existing PPM/PPB presets retain their original interpretation.
 
