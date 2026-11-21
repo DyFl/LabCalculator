@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Lab Calculator binary checks" android:allowBackup="false" />
+    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:targetPackage="com.dyfl.labcalculator.binarycheck" />
+    <queries><package android:name="com.dyfl.labcalculator" /></queries>
+</manifest>

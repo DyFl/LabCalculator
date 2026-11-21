@@ -1,5 +1,7 @@
 # Repository audit — 2026-09-20
 
+> Historical audit and follow-ups. Statements such as “not pushed,” “current,” and “unverified” describe the checkpoint where they were written. Later public commits and device checks are mapped in [release and verification status](verification.md); use that page for the reviewed release/main/November-branch distinction.
+
 These notes describe the September 20 audit. The September 29 follow-up at the end records subsequent changes and emulator verification.
 
 This audit covered the five calculation engines, all Compose screens and shared controls, activity and theme, resources and screenshots, unit/instrumentation tests, Gradle configuration, CI, README, and live GitHub description. Findings were presented before edits. No scientific formula was changed.

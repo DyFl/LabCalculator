@@ -1,5 +1,7 @@
 # UI update — September 30, 2026
 
+> Historical September 30 source checkpoint, after the published APK. The screenshots and 68/17 test record below belong to that checkpoint. October source changes replace the unit-relabeling behavior described here with quantity-preserving conversion; November screenshots are on a separate branch. See [release and verification status](verification.md).
+
 All five calculators now inherit their input controls, cards, actions, spacing, and colors from shared Compose components. This source update includes the accumulated interface polish since v1.0.2 Preview 1.
 
 ## Changes
@@ -37,7 +39,7 @@ These checks cover one Android 9 emulator. Physical devices, TalkBack, and other
 
 ## Screenshots
 
-The filled forms below show the current light/dark UI at 360 × 640 and normal text size. Longer forms scroll; screenshots show their top portion.
+The filled forms below show the September 30 development light/dark UI at 360 × 640 and normal text size. Longer forms scroll; screenshots show their top portion.
 
 ![All five filled calculators in light and dark mode](screenshots/ui-polish-light-dark.png)
 

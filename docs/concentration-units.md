@@ -1,5 +1,7 @@
 # Concentration units and basis — October 1, 2026
 
+> Historical development-pass record, included in public commit `1dc95b0`. Its 100/38 test results precede the workflow cleanup. Statements about local-only work describe the original session; see [release and verification status](verification.md) for current artifact distinctions.
+
 This separate pass builds on the dilution preparation and preset-status work. Existing exact rational dilution outputs, µL/mL instruction formatting, approximation marks, and all five preset load statuses remain in place. The subsequent [workflow cleanup](workflow-cleanup.md) shortens guidance and skips confirmation for all-blank resets; the interaction rules below include that refinement.
 
 ## Supported concentration families

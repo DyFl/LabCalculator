@@ -13,16 +13,20 @@ android {
         applicationId = "com.dyfl.labcalculator"
         minSdk = 24
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.0.2-preview.1"
+        versionCode = 4
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
+            isDebuggable = false
+            // Retain the historical local signing key so existing previews can update.
+            // Verify the certificate against published APKs before distributing this build.
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
-                enable = false
+                enable = true
             }
         }
         create("performance") {

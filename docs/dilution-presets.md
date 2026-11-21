@@ -1,5 +1,7 @@
 # Dilution preparation and preset status — October 1, 2026
 
+> Historical development-pass record. Its 83/29 test results precede the concentration-unit and workflow passes and were later included in public commit `1dc95b0`. Closing statements about no commit or publication refer to the original local session. See [release and verification status](verification.md).
+
 This records the first October 1 pass. The subsequent [concentration-units pass](concentration-units.md) adds explicit mg/L/µg/L support and quantity-preserving unit changes while retaining the output and storage behavior described here.
 
 Dilution now presents a preparation instruction: “Transfer 625 µL of stock and make up to 12.5 mL final solution volume.” The result copy button copies the complete instruction with units and approximation marks. Final solution volume includes the stock; it is never presented as solvent to add. PPM/PPB assumptions, validation, presets, and mathematical results are unchanged.
